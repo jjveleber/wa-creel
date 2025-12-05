@@ -54,55 +54,61 @@ python index.py
 http://localhost:8080
 ```
 
-## Deployment to Google Cloud
+## Deployment to Google Cloud Run
 
 ### Prerequisites
 
 - Google Cloud account
-- `gcloud` CLI installed and configured
-- Project created in Google Cloud Console
+- Cloud Build connected to GitHub (automatic deployments)
+- Cloud Run, Cloud Build, and Container Registry APIs enabled
 
 ### Deploy
 
-1. Initialize gcloud (if not already done):
+**Automatic (Recommended):**
+Just push to GitHub `main` branch - Cloud Build automatically deploys!
+
+**Manual:**
 ```bash
-gcloud init
+# Clone repo
+git clone https://github.com/jjveleber/wa-creel.git
+cd wa-creel
+
+# Deploy to Cloud Run
+gcloud run deploy wa-creel \
+  --source . \
+  --region=us-west2 \
+  --allow-unauthenticated
 ```
 
-2. Set your project:
+**Get your URL:**
 ```bash
-gcloud config set project YOUR_PROJECT_ID
-```
-
-3. Deploy to App Engine:
-```bash
-gcloud app deploy
-```
-
-4. Open your deployed app:
-```bash
-gcloud app browse
+gcloud run services describe wa-creel --region=us-west2 --format="value(status.url)"
 ```
 
 ### First Deployment Notes
 
 - The first page load will fetch data from WDFW (may take 1-2 minutes)
-- Subsequent loads use cached data
+- Subsequent loads are instant
 - Data automatically updates every 24 hours
+- **Scales to zero** when not in use (lower cost!)
+
+See [CLOUD_RUN_DEPLOYMENT.md](CLOUD_RUN_DEPLOYMENT.md) for detailed setup.
 
 ## Project Structure
 
 ```
-wdfw-creel-dashboard/
+wa-creel/
 ├── index.py              # Web server + embedded dashboard
 ├── main.py               # Data collection from WDFW
 ├── requirements.txt      # Python dependencies
-├── app.yaml             # Google App Engine configuration
-├── .gcloudignore        # Files to exclude from deployment
-├── .gitignore           # Files to exclude from git
-└── wdfw_creel_data/     # SQLite database (created at runtime)
-    ├── creel_data.db    # Main data table
-    └── .last_update     # Update timestamp
+├── Dockerfile            # Container definition for Cloud Run
+├── cloudbuild.yaml       # Cloud Build configuration
+├── .dockerignore         # Files to exclude from container
+├── .gcloudignore         # Files to exclude from deployment
+├── .gitignore            # Files to exclude from git
+└── wdfw_creel_data/      # SQLite database (created at runtime)
+    ├── creel_data.db     # Main data table
+    └── .last_update      # Update timestamp
 ```
 
 ## API Endpoints
