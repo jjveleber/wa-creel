@@ -1,14 +1,31 @@
 steps:
-  # Deploy to App Engine
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA']
+  
+  # Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['app', 'deploy', '--quiet']
-    timeout: 1600s
+    args:
+      - 'run'
+      - 'deploy'
+      - 'wa-creel'
+      - '--image=gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA'
+      - '--region=us-west2'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--max-instances=2'
+      - '--min-instances=0'
 
-# Optional: Get the deployed URL
-# - name: 'gcr.io/cloud-builders/gcloud'
-#   args: ['app', 'browse', '--no-launch-browser']
+images:
+  - 'gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA'
 
-timeout: 1800s
+timeout: 1200s
 
 options:
   logging: CLOUD_LOGGING_ONLY
