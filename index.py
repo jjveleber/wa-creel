@@ -1535,21 +1535,24 @@ class CreelDataHandler(SimpleHTTPRequestHandler):
 def main():
     PORT = int(os.environ.get("PORT", 8080))
 
-    # Check if database exists
+    # Database path (will be created on first request via auto-update)
     db_path = os.path.join("wdfw_creel_data", "creel_data.db")
-    if not os.path.exists(db_path):
-        print(f"❌ Error: Database not found at {db_path}")
-        print("Run main.py first to collect data.")
-        return
-
+    
     server = HTTPServer(('0.0.0.0', PORT), CreelDataHandler)
 
     print("=" * 70)
     print("🎣 WDFW CREEL DASHBOARD SERVER")
     print("=" * 70)
-    print(f"Database: {os.path.abspath(db_path)}")
-    print(f"Server running at: http://localhost:{PORT}")
-    print("\n📊 Open your browser to: http://localhost:{PORT}")
+    
+    if os.path.exists(db_path):
+        print(f"✅ Database found: {os.path.abspath(db_path)}")
+    else:
+        print(f"⏳ Database will be created on first request")
+        print(f"   Location: {os.path.abspath(db_path)}")
+    
+    print(f"\n🌐 Server running on port {PORT}")
+    print(f"   Local: http://localhost:{PORT}")
+    print(f"   Cloud Run: Listening on 0.0.0.0:{PORT}")
     print("\nPress Ctrl+C to stop the server")
     print("=" * 70)
 

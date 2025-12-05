@@ -21,6 +21,8 @@ steps:
       - '--cpu=1'
       - '--max-instances=2'
       - '--min-instances=0'
+      - '--timeout=300'
+      - '--startup-cpu-boost'
 
 images:
   - 'gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA'
