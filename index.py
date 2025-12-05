@@ -12,12 +12,71 @@ from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timedelta
 import sys
 
+# Import Google Cloud Storage
+try:
+    from google.cloud import storage
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    print("Warning: google-cloud-storage not installed. Database persistence disabled.")
+
 # Import the data collector
 try:
     from main import WDFWCreelCollector
 except ImportError:
     WDFWCreelCollector = None
     print("Warning: Could not import WDFWCreelCollector from main.py")
+
+
+# Google Cloud Storage helper functions
+def download_database_from_gcs(bucket_name, db_path):
+    """Download database from Google Cloud Storage if it exists"""
+    if not GCS_AVAILABLE:
+        return False
+    
+    try:
+        # Ensure data directory exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob("creel_data.db")
+        
+        if blob.exists():
+            print(f"📥 Downloading database from gs://{bucket_name}/creel_data.db")
+            blob.download_to_filename(db_path)
+            print(f"✅ Database downloaded successfully")
+            return True
+        else:
+            print(f"ℹ️  No existing database found in GCS bucket")
+            return False
+    except Exception as e:
+        print(f"⚠️  Could not download database from GCS: {e}")
+        return False
+
+
+def upload_database_to_gcs(bucket_name, db_path):
+    """Upload database to Google Cloud Storage"""
+    if not GCS_AVAILABLE:
+        return False
+    
+    if not os.path.exists(db_path):
+        print(f"⚠️  Database file not found at {db_path}, skipping upload")
+        return False
+    
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob("creel_data.db")
+        
+        print(f"📤 Uploading database to gs://{bucket_name}/creel_data.db")
+        blob.upload_from_filename(db_path)
+        print(f"✅ Database uploaded successfully")
+        return True
+    except Exception as e:
+        print(f"⚠️  Could not upload database to GCS: {e}")
+        return False
+
 
 
 class CreelDataHandler(SimpleHTTPRequestHandler):
@@ -1508,6 +1567,13 @@ class CreelDataHandler(SimpleHTTPRequestHandler):
                 print(f"✅ Update completed successfully! Total records: {total_records:,}")
                 print("=" * 70)
                 
+                # Upload database to GCS for persistence
+                bucket_name = os.environ.get("GCS_BUCKET_NAME")
+                if bucket_name:
+                    upload_database_to_gcs(bucket_name, self.DB_PATH)
+                else:
+                    print("⚠️  GCS_BUCKET_NAME not set, database will not persist across deployments")
+                
                 self.send_json({
                     'success': True,
                     'message': f'Data updated successfully. Total records: {total_records:,}',
@@ -1537,6 +1603,15 @@ def main():
 
     # Database path (will be created on first request via auto-update)
     db_path = os.path.join("wdfw_creel_data", "creel_data.db")
+    
+    # Try to download existing database from GCS
+    bucket_name = os.environ.get("GCS_BUCKET_NAME")
+    if bucket_name:
+        print(f"🪣 GCS Bucket: {bucket_name}")
+        if not os.path.exists(db_path):
+            download_database_from_gcs(bucket_name, db_path)
+    else:
+        print("⚠️  GCS_BUCKET_NAME not set, database will not persist across deployments")
     
     server = HTTPServer(('0.0.0.0', PORT), CreelDataHandler)
 
