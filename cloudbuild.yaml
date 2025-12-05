@@ -23,7 +23,7 @@ steps:
       - '--min-instances=0'
       - '--timeout=300'
       - '--cpu-boost'
-      - '--set-env-vars=GCS_BUCKET_NAME=$PROJECT_ID-wa-creel-data'
+      - '--set-env-vars=GCS_BUCKET_NAME=wa-creel-969186987830-wa-creel-data'
 
 images:
   - 'gcr.io/$PROJECT_ID/wa-creel:$COMMIT_SHA'
