@@ -1,0 +1,14 @@
+steps:
+  # Deploy to App Engine
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['app', 'deploy', '--quiet']
+    timeout: 1600s
+
+# Optional: Get the deployed URL
+# - name: 'gcr.io/cloud-builders/gcloud'
+#   args: ['app', 'browse', '--no-launch-browser']
+
+timeout: 1800s
+
+options:
+  logging: CLOUD_LOGGING_ONLY
