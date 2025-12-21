@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WDFW Puget Sound Creel Data Dashboard</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="manifest" href="/static/site.webmanifest">
+    <meta name="theme-color" content="#2563eb">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet@2.5.3/dist/esri-leaflet.js"></script>
+    
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+<header>
+    <h1>🎣 WDFW Puget Sound Creel Data Dashboard</h1>
+    <p class="subtitle">Interactive visualization of saltwater fishing survey data</p>
+</header>
+
+<div class="loading" id="loading">Loading data from database...</div>
+<div class="error" id="error"></div>
+
+<div id="dashboard" style="display: none;">
+    <div class="filters">
+        <h2>🔍 Filters</h2>
+        <div class="filter-group">
+            <div class="filter-item">
+                <label for="yearStart">Start Year</label>
+                <select id="yearStart" onchange="applyFilters()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="yearEnd">End Year</label>
+                <select id="yearEnd" onchange="applyFilters()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="catchArea">Catch Area (multi-select)</label>
+                <select id="catchArea" multiple onchange="applyFilters()">
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="species">Species (multi-select)</label>
+                <select id="species" multiple onchange="applyFilters()">
+                    <option value="chinook" selected>Chinook</option>
+                    <option value="coho" selected>Coho</option>
+                    <option value="chum" selected>Chum</option>
+                    <option value="pink" selected>Pink</option>
+                    <option value="sockeye" selected>Sockeye</option>
+                    <option value="lingcod">Lingcod</option>
+                    <option value="halibut">Halibut</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="timeUnit">Time Granularity</label>
+                <select id="timeUnit" onchange="applyFilters()">
+                    <option value="yearly">Yearly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="daily">Daily</option>
+                </select>
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="totalRecords">0</div>
+            <div class="stat-label">Total Records</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalAnglers">0</div>
+            <div class="stat-label">Total Anglers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalChinook">0</div>
+            <div class="stat-label">Total Chinook</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalCoho">0</div>
+            <div class="stat-label">Total Coho</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="yearRange">-</div>
+            <div class="stat-label">Year Range</div>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-container full-width map-container">
+            <h3 class="chart-title">Puget Sound Catch Areas Map</h3>
+            <div id="map" style="height: 600px; width: 100%;"></div>
+        </div>
+
+        <div class="chart-container full-width">
+            <h3 class="chart-title">Catch Trends Over Time</h3>
+            <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">Total Catch by Species</h3>
+            <canvas id="speciesChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">Top 10 Catch Areas</h3>
+            <canvas id="areaChart"></canvas>
+        </div>
+
+        <div class="chart-container full-width">
+            <h3 class="chart-title">Monthly Catch Distribution</h3>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+</div>
+    </div>
+
+
+    <script src="/static/js/custom-areas.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
