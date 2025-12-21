@@ -1,0 +1,70 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info
+dist/
+build/
+env/
+venv/
+.venv/
+ENV/
+
+# Database (will be in GCS)
+wdfw_creel_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Testing
+test_*.py
+test_*.sh
+*_test.py
+benchmark_*.py
+debug_*.py
+diagnose*.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment
+.env
+.env.local
+
+# Google Cloud
+credentials.json
+service-account-key.json
+.gcloud/
+
+# Development
+docker-compose.yml
+
+# Backup
+*.bak
+*.backup
+*.tmp
