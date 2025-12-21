@@ -11,8 +11,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY main.py .
-COPY index.py .
+COPY app/ app/
+COPY static/ static/
+COPY data_collector.py .
+COPY run.py .
 
 # Create data directory
 RUN mkdir -p wdfw_creel_data
@@ -21,4 +23,4 @@ RUN mkdir -p wdfw_creel_data
 EXPOSE 8080
 
 # Run the application
-CMD ["python", "index.py"]
+CMD ["python", "run.py"]
