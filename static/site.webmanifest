@@ -1,0 +1,21 @@
+{
+  "name": "WDFW Creel Dashboard",
+  "short_name": "Creel Data",
+  "description": "Washington Department of Fish and Wildlife Puget Sound Creel Data Dashboard",
+  "icons": [
+    {
+      "src": "/static/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/"
+}
