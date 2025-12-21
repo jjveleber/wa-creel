@@ -7,7 +7,7 @@
     <!-- Primary Meta Tags -->
     <title>WDFW Creel Dashboard | Washington Fishing Reports & Data</title>
     <meta name="title" content="WDFW Creel Dashboard | Washington Fishing Reports & Data">
-    <meta name="description" content="Interactive dashboard for Washington Department of Fish and Wildlife (WDFW) marine creel survey data. View salmon catch statistics, fishing trends, and marine area reports for Puget Sound and Washington Pacific Coast from 2013-2025.">
+    <meta name="description" content="View WDFW marine creel survey data for Puget Sound and WA Pacific Coast. Interactive maps, salmon catch statistics, and fishing trends from 2013-2025.">
     <meta name="keywords" content="WDFW, creel data, Puget Sound fishing, Washington fishing reports, Pacific Ocean fishing, salmon catch statistics, chinook, coho, marine areas, fishing data, WDFW creel survey, Washington coast">
     <meta name="author" content="Jeremy Veleber">
     <link rel="canonical" href="https://wa-creel.jeremyveleber.com">
@@ -16,7 +16,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://wa-creel.jeremyveleber.com">
     <meta property="og:title" content="WDFW Creel Dashboard | Washington Fishing Reports & Data">
-    <meta property="og:description" content="Interactive dashboard for Washington Department of Fish and Wildlife (WDFW) marine creel survey data. View salmon catch statistics and fishing trends for Puget Sound and Washington Pacific Coast from 2013-2025.">
+    <meta property="og:description" content="View WDFW marine creel survey data for Puget Sound and WA Pacific Coast. Interactive maps, salmon catch statistics, and fishing trends from 2013-2025.">
     <meta property="og:image" content="https://wa-creel.jeremyveleber.com/static/icon.png">
     <meta property="og:site_name" content="WDFW Creel Dashboard">
 
@@ -24,7 +24,7 @@
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://wa-creel.jeremyveleber.com">
     <meta property="twitter:title" content="WDFW Creel Dashboard | Washington Fishing Reports & Data">
-    <meta property="twitter:description" content="Interactive dashboard for WDFW marine creel survey data. View salmon catch statistics and fishing trends for Puget Sound and Washington Pacific Coast.">
+    <meta property="twitter:description" content="View WDFW marine creel survey data for Puget Sound and WA Pacific Coast. Interactive maps, salmon catch statistics, and fishing trends from 2013-2025.">
     <meta property="twitter:image" content="https://wa-creel.jeremyveleber.com/static/icon.png">
 
     <!-- Additional SEO -->
@@ -255,27 +255,27 @@
     <div class="charts-grid">
         <div class="chart-container full-width map-container">
             <h3 class="chart-title">Puget Sound Catch Areas Map</h3>
-            <div id="map" style="height: 600px; width: 100%;"></div>
+            <div id="map" style="height: 600px; width: 100%;" role="img" aria-label="Interactive map showing Puget Sound and Washington Pacific Coast marine fishing areas with catch data"></div>
         </div>
 
         <div class="chart-container full-width">
             <h3 class="chart-title">Catch Trends Over Time</h3>
-            <canvas id="trendChart"></canvas>
+            <canvas id="trendChart" role="img" aria-label="Line chart showing salmon catch trends over time from 2013 to 2025"></canvas>
         </div>
 
         <div class="chart-container">
             <h3 class="chart-title">Total Catch by Species</h3>
-            <canvas id="speciesChart"></canvas>
+            <canvas id="speciesChart" role="img" aria-label="Bar chart displaying total catch by species including Chinook, Coho, Chum, Pink, and Sockeye salmon"></canvas>
         </div>
 
         <div class="chart-container">
             <h3 class="chart-title">Top 10 Catch Areas</h3>
-            <canvas id="areaChart"></canvas>
+            <canvas id="areaChart" role="img" aria-label="Bar chart showing top 10 marine catch areas by total fish caught"></canvas>
         </div>
 
         <div class="chart-container full-width">
             <h3 class="chart-title">Monthly Catch Distribution</h3>
-            <canvas id="monthlyChart"></canvas>
+            <canvas id="monthlyChart" role="img" aria-label="Bar chart displaying catch distribution by month across the year"></canvas>
         </div>
     </div>
 </div>
