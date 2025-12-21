@@ -3,8 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WDFW Puget Sound Creel Data Dashboard</title>
-    
+
+    <!-- Primary Meta Tags -->
+    <title>WDFW Marine Creel Data Dashboard | Washington Fishing Reports & Statistics</title>
+    <meta name="title" content="WDFW Marine Creel Data Dashboard | Washington Fishing Reports & Statistics">
+    <meta name="description" content="Interactive dashboard for Washington Department of Fish and Wildlife (WDFW) marine creel survey data. View salmon catch statistics, fishing trends, and marine area reports for Puget Sound and Washington Pacific Coast from 2013-2025.">
+    <meta name="keywords" content="WDFW, creel data, Puget Sound fishing, Washington fishing reports, Pacific Ocean fishing, salmon catch statistics, chinook, coho, marine areas, fishing data, WDFW creel survey, Washington coast">
+    <meta name="author" content="Jeremy Veleber">
+    <link rel="canonical" href="https://wa-creel.jeremyveleber.com">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wa-creel.jeremyveleber.com">
+    <meta property="og:title" content="WDFW Marine Creel Data Dashboard">
+    <meta property="og:description" content="Interactive dashboard for Washington Department of Fish and Wildlife (WDFW) marine creel survey data. View salmon catch statistics and fishing trends for Puget Sound and Washington Pacific Coast from 2013-2025.">
+    <meta property="og:image" content="https://wa-creel.jeremyveleber.com/static/icon.png">
+    <meta property="og:site_name" content="WDFW Creel Dashboard">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://wa-creel.jeremyveleber.com">
+    <meta property="twitter:title" content="WDFW Marine Creel Data Dashboard">
+    <meta property="twitter:description" content="Interactive dashboard for WDFW marine creel survey data. View salmon catch statistics and fishing trends for Puget Sound and Washington Pacific Coast.">
+    <meta property="twitter:image" content="https://wa-creel.jeremyveleber.com/static/icon.png">
+
+    <!-- Additional SEO -->
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="7 days">
+    <meta name="distribution" content="global">
+    <meta name="rating" content="general">
+
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="US-WA">
+    <meta name="geo.placename" content="Washington State">
+    <meta name="geo.position" content="47.6062;-122.3321">
+    <meta name="ICBM" content="47.6062, -122.3321">
+
     <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
@@ -12,7 +47,119 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="manifest" href="/static/site.webmanifest">
     <meta name="theme-color" content="#2563eb">
-    
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "WDFW Marine Creel Data Dashboard",
+          "applicationCategory": "Data Visualization",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "Interactive dashboard for Washington Department of Fish and Wildlife (WDFW) marine creel survey data. View salmon catch statistics, fishing trends, and marine area reports for Puget Sound and Washington Pacific Coast from 2013-2025.",
+          "url": "https://wa-creel.jeremyveleber.com",
+          "screenshot": "https://wa-creel.jeremyveleber.com/static/icon.png",
+          "author": {
+            "@type": "Person",
+            "name": "Jeremy Veleber",
+            "url": "https://jeremyveleber.com"
+          },
+          "provider": {
+            "@type": "Organization",
+            "name": "Jeremy Veleber",
+            "url": "https://jeremyveleber.com"
+          },
+          "featureList": [
+            "Interactive maps of Puget Sound and Washington Pacific Coast marine areas",
+            "Catch statistics by species (Chinook, Coho, Chum, Pink, Sockeye)",
+            "Time series analysis (daily, weekly, monthly, yearly)",
+            "Filterable data by year, area, and species",
+            "Historical data from 2013-2025",
+            "Real-time data updates from WDFW"
+          ]
+        },
+        {
+          "@type": "Dataset",
+          "name": "WDFW Marine Creel Survey Data - Puget Sound and Pacific Coast",
+          "description": "Comprehensive recreational fishing survey data from Washington Department of Fish and Wildlife covering Puget Sound marine areas and Pacific Ocean coastal waters adjacent to Washington State from 2013 to 2025. Includes catch counts, angler effort, and species distribution.",
+          "url": "https://wa-creel.jeremyveleber.com",
+          "keywords": [
+            "WDFW",
+            "creel survey",
+            "Puget Sound",
+            "Pacific Ocean",
+            "Washington coast",
+            "salmon",
+            "fishing statistics",
+            "recreational fishing",
+            "marine areas",
+            "Washington State",
+            "catch data"
+          ],
+          "creator": {
+            "@type": "Organization",
+            "name": "Washington Department of Fish and Wildlife",
+            "url": "https://wdfw.wa.gov"
+          },
+          "temporalCoverage": "2013/2025",
+          "spatialCoverage": {
+            "@type": "Place",
+            "name": "Puget Sound and Washington Pacific Coast",
+            "geo": {
+              "@type": "GeoShape",
+              "box": "49.0 -125.0 46.0 -122.0"
+            }
+          },
+          "variableMeasured": [
+            "Chinook salmon catch",
+            "Coho salmon catch",
+            "Chum salmon catch",
+            "Pink salmon catch",
+            "Sockeye salmon catch",
+            "Lingcod catch",
+            "Halibut catch",
+            "Angler effort",
+            "Number of interviews"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "name": "WDFW Creel Dashboard",
+          "url": "https://wa-creel.jeremyveleber.com",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://wa-creel.jeremyveleber.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://jeremyveleber.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "WDFW Creel Dashboard",
+              "item": "https://wa-creel.jeremyveleber.com"
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -21,7 +168,7 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
     <script src="https://unpkg.com/esri-leaflet@2.5.3/dist/esri-leaflet.js"></script>
-    
+
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>

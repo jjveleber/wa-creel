@@ -1,0 +1,9 @@
+# robots.txt for wa-creel.jeremyveleber.com
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://wa-creel.jeremyveleber.com/sitemap.xml
+
+# Crawl delay (optional, helps prevent overload)
+Crawl-delay: 1
