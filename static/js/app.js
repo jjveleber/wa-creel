@@ -195,6 +195,18 @@ let charts = {};
                         maxZoom: 19
                     }).addTo(map);
 
+                    // Create custom panes for layer separation (prevents hover flicker)
+                    map.createPane('wdfwPane');
+                    map.createPane('customAreasPane');
+
+                    // Set z-indexes (higher = on top, default overlayPane is 400)
+                    map.getPane('wdfwPane').style.zIndex = 400;         // WDFW areas on bottom
+                    map.getPane('customAreasPane').style.zIndex = 450;  // Custom areas on top
+
+                    // Disable pointer events on WDFW pane to prevent hover flicker
+                    map.getPane('wdfwPane').style.pointerEvents = 'none';
+                    map.getPane('customAreasPane').style.pointerEvents = 'auto';
+
                 }
 
                 // Create a map of catch data by area name
@@ -385,6 +397,7 @@ let charts = {};
                     })
                     .then(geojsonData => {
                         marineAreasLayer = L.geoJSON(geojsonData, {
+                            pane: 'wdfwPane',
                             style: getStyleForFeature,
                             onEachFeature: function(feature, layer) {
                                 const props = feature.properties;
@@ -423,7 +436,6 @@ let charts = {};
                                         fillColor: '#facc15',
                                         fillOpacity: 0.6
                                     });
-                                    layer.bringToFront();
                                 });
 
                                 layer.on('mouseout', function(e) {
@@ -459,7 +471,6 @@ let charts = {};
                                                 selectedAreaLayers.add(layer);
                                                 const selectedStyle = getStyleForFeature(feature, true);
                                                 layer.setStyle(selectedStyle);
-                                                layer.bringToFront();
                                             } else {
                                                 // Was selected, now is not - remove from selection set
                                                 selectedAreaLayers.delete(layer);
@@ -511,7 +522,6 @@ let charts = {};
                         // Bring custom layers to front so they're above GIS layers
                         if (window.customAreaLayers) {
                             Object.values(window.customAreaLayers).forEach(layer => {
-                                layer.bringToFront();
                             });
                         }
                     })
@@ -534,6 +544,7 @@ let charts = {};
                     const fillOpacity = 0.3 + intensity * 0.5;
 
                     const customLayer = L.geoJSON(geoJson, {
+                        pane: 'customAreasPane',
                         style: function(feature) {
                             return {
                                 color: '#3182ce',
@@ -547,8 +558,9 @@ let charts = {};
                             // Store reference for selection tracking
                             layer.areaName = areaName;
 
-                            // Hover effects
+                            // Hover effects - STOP EVENT PROPAGATION
                             layer.on('mouseover', function(e) {
+                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
                                 const isSelected = selectedAreaLayers.has(layer);
                                 if (!isSelected) {
                                     layer.setStyle({
@@ -559,6 +571,7 @@ let charts = {};
                             });
 
                             layer.on('mouseout', function(e) {
+                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
                                 const isSelected = selectedAreaLayers.has(layer);
                                 if (!isSelected) {
                                     layer.setStyle({
@@ -568,8 +581,9 @@ let charts = {};
                                 }
                             });
 
-                            // Click to toggle selection
+                            // Click to toggle selection - STOP EVENT PROPAGATION
                             layer.on('click', function(e) {
+                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
                                 const catchAreaSelect = document.getElementById('catchArea');
 
                                 let optionFound = false;
@@ -593,7 +607,6 @@ let charts = {};
                                             fillColor: '#fbbf24',
                                             fillOpacity: 0.7
                                         });
-                                        layer.bringToFront();
                                     } else {
                                         selectedAreaLayers.delete(layer);
                                         layer.setStyle({
@@ -627,7 +640,6 @@ let charts = {};
                     }).addTo(map);
 
                     // Bring custom layer to front so it's clickable above GIS layers
-                    customLayer.bringToFront();
 
                     // Store reference
                     if (!window.customAreaLayers) {
