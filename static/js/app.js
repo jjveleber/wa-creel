@@ -1,4 +1,4 @@
-        let charts = {};
+let charts = {};
         let map = null;
         let mapLayers = [];
         let marineAreasLayer = null; // Store the Esri feature layer
@@ -173,12 +173,6 @@
                 return;
             }
 
-            // Check if Esri Leaflet is loaded
-            if (typeof L.esri === 'undefined') {
-                console.error('Esri Leaflet library not loaded!');
-                document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error: Esri Leaflet library required. Please refresh the page.</div>';
-                return;
-            }
 
             try {
                 // Initialize map if not already created
@@ -269,27 +263,27 @@
                         fillOpacity: fillOpacity
                     };
                 }
-            
+
                 // If layer already exists, update styling without recreating
                 if (marineAreasLayer && mapLayers.length > 0) {
-                    
+
                     // Get selected areas from filter dropdown
                     const catchAreaSelect = document.getElementById('catchArea');
                     const selectedAreas = Array.from(catchAreaSelect.selectedOptions).map(opt => opt.value);
-                    
+
                     // Clear and rebuild selection tracking
                     selectedAreaLayers.clear();
-                    
+
                     // Update each existing layer
                     mapLayers.forEach(layer => {
                         const props = layer.feature.properties;
                         const gisAreaNumber = props.maNumber;
                         const gisAreaName = props.maName;
-                        
+
                         // Find matching database area
                         let dbAreaName = null;
                         let areaData = { total: 0, surveys: 0 };
-                        
+
                         // Try exact name match first
                         if (window.mapDataLookup && window.mapDataLookup[gisAreaName]) {
                             dbAreaName = gisAreaName;
@@ -305,24 +299,24 @@
                                 }
                             }
                         }
-                        
+
                         // Check if this area is selected
                         const isSelected = dbAreaName && selectedAreas.includes(dbAreaName);
-                        
+
                         // Update styling
                         const style = getStyleForFeature(layer.feature, isSelected);
                         layer.setStyle(style);
-                        
+
                         // Track selected areas
                         if (isSelected) {
                             selectedAreaLayers.add(layer);
                         }
-                        
+
                         // Update popup content
                         const displayName = dbAreaName || `${props.maName} (Area ${props.maNumber})`;
-                        const wacSection = props.WAC ? 
+                        const wacSection = props.WAC ?
                             `<p style="margin: 8px 0 4px 0; font-size: 0.85em; color: #718096;"><strong>WAC:</strong> ${props.WAC}</p>` : '';
-                        
+
                         const popupContent = `
                             <div style="font-family: sans-serif;">
                                 <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
@@ -337,21 +331,21 @@
                         `;
                         layer.setPopupContent(popupContent);
                     });
-                    
+
                     // Update custom area layers
                     if (window.customAreaLayers) {
                         Object.entries(window.customAreaLayers).forEach(([areaName, layerGroup]) => {
                             const isSelected = selectedAreas.includes(areaName);
-                            
+
                             layerGroup.eachLayer(function(layer) {
                                 let areaData = { total: 0, surveys: 0 };
                                 if (window.mapDataLookup && window.mapDataLookup[areaName]) {
                                     areaData = window.mapDataLookup[areaName];
                                 }
-                                
+
                                 const intensity = Math.min(areaData.total / maxCatch, 1);
                                 const fillOpacity = 0.3 + intensity * 0.5;
-                                
+
                                 if (isSelected) {
                                     selectedAreaLayers.add(layer);
                                     layer.setStyle({
@@ -370,938 +364,161 @@
                                     });
                                 }
                             });
-                            
+
                             layerGroup.bringToFront();
                         });
                     }
-                    
+
                     return; // Exit - layer updated, no need to recreate
                 }
-                
+
                 // Create layer for the first time
                 mapLayers = [];
 
-                const WDFW_MAPSERVER_URL = "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/ApplicationServices/Marine_Areas/MapServer";
-                const LAYER_INDEX = 3;
-
-                marineAreasLayer = L.esri.featureLayer({
-                    url: WDFW_MAPSERVER_URL + '/' + LAYER_INDEX,
-                    style: getStyleForFeature,
-
-                    onEachFeature: function(feature, layer) {
-                        const props = feature.properties;
-
-                        const gisAreaNumber = props.maNumber;
-                        
-
-                        // Find matching database area
-                        let dbAreaName = null;
-                        let areaData = { total: 0, surveys: 0 };
-
-                        // First, try exact name match (for custom areas like "Bellingham Bay")
-                        const gisAreaName = props.maName;
-                        if (window.mapDataLookup && window.mapDataLookup[gisAreaName]) {
-                            dbAreaName = gisAreaName;
-                            areaData = window.mapDataLookup[gisAreaName];
-                        } else {
-                            // If no exact match, try pattern "Area {number}," matching
-                            const searchPattern = `Area ${gisAreaNumber},`;
-                            for (const [dbName, dbData] of Object.entries(window.mapDataLookup || {})) {
-                                if (dbName.startsWith(searchPattern)) {
-                                    dbAreaName = dbName;
-                                    areaData = dbData;
-                                    break;
-                                }
-                            }
+                // Load marine areas from static GeoJSON file
+                fetch('/static/data/wdfw_marine_areas.json')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load marine areas');
                         }
-                        
-                        if (!dbAreaName) {
-                        }
+                        return response.json();
+                    })
+                    .then(geojsonData => {
+                        marineAreasLayer = L.geoJSON(geojsonData, {
+                            style: getStyleForFeature,
+                            onEachFeature: function(feature, layer) {
+                                const props = feature.properties;
+                                const gisAreaNumber = props.maNumber;
 
-                        mapLayers.push(layer);
+                                // Find matching database area
+                                let dbAreaName = null;
+                                let areaData = { total: 0, surveys: 0 };
 
-                        // Mouse hover effects
-                        layer.on('mouseover', function(e) {
-                            layer.setStyle({
-                                weight: 4,
-                                fillColor: '#facc15',
-                                fillOpacity: 0.6
-                            });
-                            layer.bringToFront();
-                        });
-
-                        layer.on('mouseout', function(e) {
-                            // Don't reset style if this is the selected area
-                            const isSelected = selectedAreaLayers.has(layer);
-                            const style = getStyleForFeature(feature, isSelected);
-                            layer.setStyle(style);
-                        });
-
-                        // Click to toggle area selection
-                        layer.on('click', function(e) {
-                            if (dbAreaName) {
-                                const catchAreaSelect = document.getElementById('catchArea');
-                                
-                                // Find the option for this area
-                                let optionFound = false;
-                                let isCurrentlySelected = false;
-                                
-                                for (let i = 0; i < catchAreaSelect.options.length; i++) {
-                                    if (catchAreaSelect.options[i].value === dbAreaName) {
-                                        optionFound = true;
-                                        isCurrentlySelected = catchAreaSelect.options[i].selected;
-                                        // Toggle the selection
-                                        catchAreaSelect.options[i].selected = !isCurrentlySelected;
-                                        break;
+                                // First, try exact name match (for custom areas like "Bellingham Bay")
+                                const gisAreaName = props.maName;
+                                if (window.mapDataLookup && window.mapDataLookup[gisAreaName]) {
+                                    dbAreaName = gisAreaName;
+                                    areaData = window.mapDataLookup[gisAreaName];
+                                } else {
+                                    // If no exact match, try pattern "Area {number}," matching
+                                    const searchPattern = `Area ${gisAreaNumber},`;
+                                    for (const [dbName, dbData] of Object.entries(window.mapDataLookup || {})) {
+                                        if (dbName.startsWith(searchPattern)) {
+                                            dbAreaName = dbName;
+                                            areaData = dbData;
+                                            break;
+                                        }
                                     }
                                 }
-                                
-                                if (optionFound) {
-                                    // Update visual styling immediately
-                                    if (!isCurrentlySelected) {
-                                        // Was not selected, now is - add to selection set
-                                        selectedAreaLayers.add(layer);
-                                        const selectedStyle = getStyleForFeature(feature, true);
-                                        layer.setStyle(selectedStyle);
-                                        layer.bringToFront();
-                                    } else {
-                                        // Was selected, now is not - remove from selection set
-                                        selectedAreaLayers.delete(layer);
-                                        const unselectedStyle = getStyleForFeature(feature, false);
-                                        layer.setStyle(unselectedStyle);
-                                    }
-                                    
-                                    // Apply filters to update charts
-                                    applyFilters();
+
+                                if (!dbAreaName) {
                                 }
-                            }
-                        });
 
-                        // Popup content
-                        const displayName = dbAreaName || `${props.maName} (Area ${props.maNumber})`;
+                                mapLayers.push(layer);
 
-                        const wacSection = props.WAC ? 
-                            `<p style="margin: 8px 0 4px 0; font-size: 0.85em; color: #718096;"><strong>WAC:</strong> ${props.WAC}</p>` : '';
-
-                        const popupContent = `
-                            <div style="font-family: sans-serif;">
-                                <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
-                                    ${displayName}
-                                </h3>
-                                <div style="border-top: 1px solid #e2e8f0; padding-top: 8px;">
-                                    <p style="margin: 4px 0;"><strong>Total Catch:</strong> ${Math.round(areaData.total).toLocaleString()}</p>
-                                    <p style="margin: 4px 0;"><strong>Surveys:</strong> ${areaData.surveys.toLocaleString()}</p>
-                                </div>
-                                ${wacSection}
-                            </div>
-                        `;
-                        layer.bindPopup(popupContent);
-                    }
-                }).addTo(map);
-
-                // Add custom area polygons for areas not in WDFW GIS layer
-                const customAreaPolygons = {
-                    "Bellingham Bay": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Bellingham Bay",
-                            "description": "Waters of Bellingham and Padilla bays"
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.66991, 48.73174],
-                                [-122.64793, 48.71588],
-                                [-122.62012, 48.74849],
-                                [-122.61017, 48.75574],
-                                [-122.59867, 48.7692],
-                                [-122.59094, 48.7787],
-                                [-122.55901, 48.77723],
-                                [-122.53429, 48.77463],
-                                [-122.53017, 48.7683],
-                                [-122.51713, 48.76366],
-                                [-122.48571, 48.75155],
-                                [-122.49155, 48.74261],
-                                [-122.49687, 48.73717],
-                                [-122.50631, 48.72789],
-                                [-122.50769, 48.72359],
-                                [-122.51747, 48.71826],
-                                [-122.52022, 48.71577],
-                                [-122.52022, 48.71203],
-                                [-122.51541, 48.70444],
-                                [-122.51558, 48.69946],
-                                [-122.51455, 48.69867],
-                                [-122.49799, 48.69583],
-                                [-122.49207, 48.68507],
-                                [-122.49086, 48.67651],
-                                [-122.49052, 48.67118],
-                                [-122.49292, 48.67016],
-                                [-122.49447, 48.66954],
-                                [-122.49378, 48.66807],
-                                [-122.49481, 48.66716],
-                                [-122.49773, 48.66767],
-                                [-122.50031, 48.66795],
-                                [-122.50056, 48.66676],
-                                [-122.49816, 48.66591],
-                                [-122.49859, 48.66472],
-                                [-122.50082, 48.66404],
-                                [-122.50108, 48.66302],
-                                [-122.50194, 48.66489],
-                                [-122.50305, 48.66585],
-                                [-122.50872, 48.6696],
-                                [-122.51181, 48.66914],
-                                [-122.51224, 48.66773],
-                                [-122.50975, 48.66438],
-                                [-122.50408, 48.65639],
-                                [-122.49378, 48.65219],
-                                [-122.49361, 48.65009],
-                                [-122.4852, 48.6413],
-                                [-122.46469, 48.62604],
-                                [-122.44623, 48.61929],
-                                [-122.44623, 48.61589],
-                                [-122.44434, 48.61385],
-                                [-122.44074, 48.61316],
-                                [-122.43834, 48.61078],
-                                [-122.43628, 48.6084],
-                                [-122.43387, 48.60635],
-                                [-122.42632, 48.6],
-                                [-122.43044, 48.59285],
-                                [-122.44349, 48.57547],
-                                [-122.45378, 48.56752],
-                                [-122.4579, 48.56604],
-                                [-122.46117, 48.56673],
-                                [-122.45979, 48.56309],
-                                [-122.45979, 48.56116],
-                                [-122.46357, 48.56093],
-                                [-122.46632, 48.55945],
-                                [-122.46426, 48.55684],
-                                [-122.46146, 48.55703],
-                                [-122.45707, 48.55508],
-                                [-122.45851, 48.5548],
-                                [-122.4602, 48.55551],
-                                [-122.46139, 48.55548],
-                                [-122.46278, 48.55534],
-                                [-122.46421, 48.55553],
-                                [-122.46546, 48.55549],
-                                [-122.46632, 48.55536],
-                                [-122.4678, 48.5562],
-                                [-122.47069, 48.5573],
-                                [-122.4755, 48.55536],
-                                [-122.48116, 48.55985],
-                                [-122.48477, 48.55974],
-                                [-122.48752, 48.55906],
-                                [-122.48606, 48.55764],
-                                [-122.48563, 48.55553],
-                                [-122.48812, 48.5569],
-                                [-122.49224, 48.56014],
-                                [-122.49438, 48.56337],
-                                [-122.49704, 48.5665],
-                                [-122.49387, 48.56763],
-                                [-122.48829, 48.56866],
-                                [-122.48692, 48.56991],
-                                [-122.49018, 48.57081],
-                                [-122.49301, 48.57127],
-                                [-122.49627, 48.57309],
-                                [-122.4961, 48.57519],
-                                [-122.49473, 48.57627],
-                                [-122.53927, 48.57672],
-                                [-122.5421, 48.57956],
-                                [-122.55052, 48.58212],
-                                [-122.55043, 48.58637],
-                                [-122.55343, 48.58899],
-                                [-122.55635, 48.5891],
-                                [-122.55747, 48.58717],
-                                [-122.55738, 48.58558],
-                                [-122.56039, 48.58399],
-                                [-122.5615, 48.58194],
-                                [-122.55996, 48.58047],
-                                [-122.55755, 48.57945],
-                                [-122.55704, 48.57769],
-                                [-122.55755, 48.57581],
-                                [-122.55816, 48.57451],
-                                [-122.55386, 48.57485],
-                                [-122.53472, 48.57388],
-                                [-122.52271, 48.56707],
-                                [-122.50588, 48.56457],
-                                [-122.50271, 48.5611],
-                                [-122.50125, 48.55832],
-                                [-122.49928, 48.55559],
-                                [-122.49953, 48.55252],
-                                [-122.50073, 48.54957],
-                                [-122.49928, 48.54758],
-                                [-122.49893, 48.54536],
-                                [-122.49833, 48.54321],
-                                [-122.49619, 48.53991],
-                                [-122.49241, 48.53786],
-                                [-122.48932, 48.53633],
-                                [-122.48692, 48.53525],
-                                [-122.48769, 48.53309],
-                                [-122.48408, 48.52138],
-                                [-122.48374, 48.51768],
-                                [-122.48674, 48.51478],
-                                [-122.48786, 48.51302],
-                                [-122.48674, 48.51058],
-                                [-122.48297, 48.49096],
-                                [-122.47825, 48.48111],
-                                [-122.4719, 48.47793],
-                                [-122.46915, 47.47383],
-                                [-122.47078, 48.47025],
-                                [-122.47438, 48.4682],
-                                [-122.50331, 48.45898],
-                                [-122.53678, 48.46638],
-                                [-122.55936, 48.50137],
-                                [-122.57584, 48.49591],
-                                [-122.57652, 48.48339],
-                                [-122.57309, 48.47019],
-                                [-122.57549, 48.46427],
-                                [-122.5827, 48.46632],
-                                [-122.59644, 48.49226],
-                                [-122.60124, 48.50751],
-                                [-122.59506, 48.51797],
-                                [-122.60124, 48.52274],
-                                [-122.62047, 48.5207],
-                                [-122.66922, 48.50591],
-                                [-122.67746, 48.50751],
-                                [-122.64725, 48.5282],
-                                [-122.63042, 48.52706],
-                                [-122.61944, 48.52979],
-                                [-122.60845, 48.53252],
-                                [-122.60536, 48.5357],
-                                [-122.59712, 48.5357],
-                                [-122.59232, 48.53616],
-                                [-122.58614, 48.53275],
-                                [-122.57618, 48.52911],
-                                [-122.5724, 48.52888],
-                                [-122.57206, 48.53434],
-                                [-122.57343, 48.54366],
-                                [-122.58064, 48.55093],
-                                [-122.59575, 48.55684],
-                                [-122.6033, 48.56002],
-                                [-122.61532, 48.56548],
-                                [-122.62218, 48.57047],
-                                [-122.62939, 48.57479],
-                                [-122.63214, 48.57911],
-                                [-122.63695, 48.5841],
-                                [-122.64175, 48.58864],
-                                [-122.64484, 48.58887],
-                                [-122.65695, 48.60956],
-                                [-122.65703, 48.61214],
-                                [-122.6615, 48.61368],
-                                [-122.66201, 48.6202],
-                                [-122.67076, 48.6248],
-                                [-122.67351, 48.62979],
-                                [-122.7575, 48.6934],
-                                [-122.71179, 48.78696],
-                                [-122.66991, 48.73174]
-                            ]]
-                        }
-                    },
-                    "Commencement Bay": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Commencement Bay",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.41725, 47.29621],
-                                [-122.46122, 47.27504],
-                                [-122.45619, 47.27387],
-                                [-122.4531, 47.27311],
-                                [-122.45011, 47.2716],
-                                [-122.44719, 47.26927],
-                                [-122.4453, 47.26776],
-                                [-122.44084, 47.26391],
-                                [-122.43912, 47.26182],
-                                [-122.40686, 47.28546],
-                                [-122.41167, 47.29122],
-                                [-122.41725, 47.29621]
-                            ]]
-                        }
-                    },
-                    "Dungeness Bay": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Dungeness Bay",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-123.09864, 48.18354],
-                                [-123.08792, 48.18961],
-                                [-123.04645, 48.09723],
-                                [-123.05898, 48.11434],
-                                [-123.06859, 48.12161],
-                                [-123.08129, 48.12554],
-                                [-123.08768, 48.12886],
-                                [-123.09982, 48.13697],
-                                [-123.10973, 48.14582],
-                                [-123.11436, 48.15025],
-                                [-123.11758, 48.15214],
-                                [-123.12153, 48.15292],
-                                [-123.12196, 48.1522],
-                                [-123.12466, 48.15272],
-                                [-123.12903, 48.15429],
-                                [-123.13011, 48.15398],
-                                [-123.13058, 48.15246],
-                                [-123.13238, 48.15086],
-                                [-123.13491, 48.15063],
-                                [-123.14173, 48.15114],
-                                [-123.14439, 48.15189],
-                                [-123.15036, 48.15398],
-                                [-123.15048, 48.15498],
-                                [-123.15113, 48.15567],
-                                [-123.15164, 48.15446],
-                                [-123.1522, 48.15275],
-                                [-123.1528, 48.1512],
-                                [-123.15383, 48.1504],
-                                [-123.16159, 48.15011],
-                                [-123.17202, 48.14773],
-                                [-123.1779, 48.1463],
-                                [-123.18201, 48.14676],
-                                [-123.18472, 48.14653],
-                                [-123.18407, 48.14796],
-                                [-123.17828, 48.15346],
-                                [-123.17476, 48.15604],
-                                [-123.17206, 48.1583],
-                                [-123.16876, 48.16042],
-                                [-123.15203, 48.17195],
-                                [-123.14761, 48.1741],
-                                [-123.14525, 48.17499],
-                                [-123.14272, 48.17544],
-                                [-123.13491, 48.17513],
-                                [-123.13658, 48.17367],
-                                [-123.13791, 48.17192],
-                                [-123.1389, 48.17046],
-                                [-123.13984, 48.16921],
-                                [-123.14032, 48.16823],
-                                [-123.14113, 48.167],
-                                [-123.14156, 48.16663],
-                                [-123.14177, 48.16769],
-                                [-123.14169, 48.16895],
-                                [-123.1416, 48.17044],
-                                [-123.14023, 48.17138],
-                                [-123.13997, 48.17207],
-                                [-123.14066, 48.17344],
-                                [-123.14057, 48.17413],
-                                [-123.14147, 48.17419],
-                                [-123.14208, 48.17356],
-                                [-123.14263, 48.17104],
-                                [-123.14255, 48.16803],
-                                [-123.14246, 48.16617],
-                                [-123.1425, 48.16563],
-                                [-123.14246, 48.16477],
-                                [-123.14272, 48.16371],
-                                [-123.14327, 48.16225],
-                                [-123.1437, 48.1609],
-                                [-123.14422, 48.15993],
-                                [-123.14507, 48.15927],
-                                [-123.14559, 48.15841],
-                                [-123.14542, 48.15713],
-                                [-123.14464, 48.15652],
-                                [-123.14327, 48.15635],
-                                [-123.14207, 48.15667],
-                                [-123.14147, 48.15776],
-                                [-123.14104, 48.1593],
-                                [-123.13984, 48.16348],
-                                [-123.13885, 48.16614],
-                                [-123.13761, 48.16823],
-                                [-123.13658, 48.16972],
-                                [-123.13499, 48.17175],
-                                [-123.13349, 48.1735],
-                                [-123.13208, 48.17476],
-                                [-123.13027, 48.17556],
-                                [-123.12843, 48.17625],
-                                [-123.1268, 48.1767],
-                                [-123.12564, 48.17705],
-                                [-123.12508, 48.17708],
-                                [-123.12586, 48.17659],
-                                [-123.12689, 48.17647],
-                                [-123.12723, 48.17605],
-                                [-123.12706, 48.17556],
-                                [-123.12603, 48.17556],
-                                [-123.12397, 48.17599],
-                                [-123.1159, 48.18002],
-                                [-123.11327, 48.18054],
-                                [-123.11216, 48.18074],
-                                [-123.10928, 48.18077],
-                                [-123.10444, 48.1818],
-                                [-123.10092, 48.18257],
-                                [-123.09864, 48.18354]
-                            ]]
-                        }
-                    },
-                    "Hoodsport Hatchery": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Hoodsport Hatchery",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-123.13859, 47.40718],
-                                [-123.1389, 47.40646],
-                                [-123.13821, 47.40634],
-                                [-123.13811, 47.4064],
-                                [-123.13802, 47.40648],
-                                [-123.13796, 47.40655],
-                                [-123.13791, 47.40664],
-                                [-123.13787, 47.40674],
-                                [-123.13786, 47.40681],
-                                [-123.13785, 47.40688],
-                                [-123.13783, 47.40695],
-                                [-123.13783, 47.40701],
-                                [-123.13859, 47.40718]
-                            ]]
-                        }
-                    },
-                    "Inner Elliot Bay Fishery Area": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Inner Elliot Bay Fishery Area",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.43606, 47.66196],
-                                [-122.42091, 47.57632],
-                                [-122.41728, 47.57771],
-                                [-122.40144, 47.58394],
-                                [-122.3914, 47.5932],
-                                [-122.38583, 47.59563],
-                                [-122.38205, 47.59424],
-                                [-122.38085, 47.59146],
-                                [-122.38042, 47.59007],
-                                [-122.37167, 47.58347],
-                                [-122.36884, 47.58509],
-                                [-122.36266, 47.58509],
-                                [-122.34387, 47.59181],
-                                [-122.34078, 47.59928],
-                                [-122.34104, 47.60431],
-                                [-122.37555, 47.62583],
-                                [-122.3958, 47.62699],
-                                [-122.40061, 47.6315],
-                                [-122.41639, 47.64053],
-                                [-122.41879, 47.64758],
-                                [-122.42514, 47.65556],
-                                [-122.43606, 47.66196]
-                            ]]
-                        }
-                    },
-                    "Quilcene, Dabob Bay": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Quilcene, Dabob Bay",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.88488, 47.7227],
-                                [-122.81351, 47.72454],
-                                [-122.81317, 47.72755],
-                                [-122.80939, 47.73009],
-                                [-122.80751, 47.73297],
-                                [-122.80871, 47.73713],
-                                [-122.81128, 47.74244],
-                                [-122.81111, 47.74625],
-                                [-122.80922, 47.74914],
-                                [-122.80528, 47.75294],
-                                [-122.80202, 47.75664],
-                                [-122.79996, 47.75941],
-                                [-122.80047, 47.76356],
-                                [-122.7967, 47.7661],
-                                [-122.79635, 47.76991],
-                                [-122.7967, 47.77406],
-                                [-122.79481, 47.77717],
-                                [-122.79292, 47.78167],
-                                [-122.79086, 47.78467],
-                                [-122.78949, 47.78825],
-                                [-122.78949, 47.79205],
-                                [-122.7888, 47.79551],
-                                [-122.78915, 47.79817],
-                                [-122.7876, 47.80139],
-                                [-122.78692, 47.80416],
-                                [-122.78949, 47.80635],
-                                [-122.79224, 47.80797],
-                                [-122.79515, 47.80993],
-                                [-122.79773, 47.81281],
-                                [-122.79567, 47.81627],
-                                [-122.79532, 47.82042],
-                                [-122.79807, 47.8248],
-                                [-122.80202, 47.82768],
-                                [-122.80613, 47.83183],
-                                [-122.80528, 47.84151],
-                                [-122.80785, 47.84681],
-                                [-122.80459, 47.84969],
-                                [-122.80665, 47.85418],
-                                [-122.80991, 47.8574],
-                                [-122.813, 47.8589],
-                                [-122.81265, 47.85452],
-                                [-122.81197, 47.85164],
-                                [-122.81283, 47.84715],
-                                [-122.81368, 47.84392],
-                                [-122.81643, 47.84174],
-                                [-122.81918, 47.83966],
-                                [-122.82123, 47.83678],
-                                [-122.82175, 47.83344],
-                                [-122.82141, 47.82975],
-                                [-122.82226, 47.8248],
-                                [-122.82484, 47.82053],
-                                [-122.82347, 47.81846],
-                                [-122.819, 47.81223],
-                                [-122.81557, 47.80785],
-                                [-122.8178, 47.80047],
-                                [-122.8202, 47.79425],
-                                [-122.82192, 47.78963],
-                                [-122.83084, 47.78294],
-                                [-122.84354, 47.77798],
-                                [-122.85281, 47.7796],
-                                [-122.85555, 47.78237],
-                                [-122.85384, 47.78548],
-                                [-122.85041, 47.79309],
-                                [-122.84955, 47.79701],
-                                [-122.84732, 47.80024],
-                                [-122.84817, 47.80843],
-                                [-122.84972, 47.81177],
-                                [-122.85195, 47.81627],
-                                [-122.85281, 47.82341],
-                                [-122.85487, 47.82583],
-                                [-122.85899, 47.82572],
-                                [-122.86276, 47.82341],
-                                [-122.86602, 47.82203],
-                                [-122.86654, 47.81419],
-                                [-122.86859, 47.81189],
-                                [-122.86825, 47.80843],
-                                [-122.86636, 47.80589],
-                                [-122.86774, 47.79943],
-                                [-122.86791, 47.79701],
-                                [-122.86619, 47.78583],
-                                [-122.86465, 47.77798],
-                                [-122.8619, 47.76968],
-                                [-122.85778, 47.76506],
-                                [-122.85092, 47.76264],
-                                [-122.84886, 47.75375],
-                                [-122.84955, 47.74994],
-                                [-122.85195, 47.74706],
-                                [-122.85178, 47.74486],
-                                [-122.85178, 47.74175],
-                                [-122.85144, 47.73817],
-                                [-122.85367, 47.73574],
-                                [-122.85923, 47.73586],
-                                [-122.86232, 47.74117],
-                                [-122.86472, 47.74371],
-                                [-122.87125, 47.74371],
-                                [-122.87399, 47.7384],
-                                [-122.87227, 47.73494],
-                                [-122.87227, 47.73147],
-                                [-122.87777, 47.73032],
-                                [-122.88051, 47.73147],
-                                [-122.88326, 47.73032],
-                                [-122.88488, 47.7227]
-                            ]]
-                        }
-                    },
-                    "Sinclair Inlet": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Sinclair Inlet",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.5929, 47.66342],
-                                [-122.6125, 47.6631],
-                                [-122.61503, 47.65284],
-                                [-122.61572, 47.65174],
-                                [-122.61816, 47.65128],
-                                [-122.61894, 47.65056],
-                                [-122.62335, 47.65128],
-                                [-122.62743, 47.65174],
-                                [-122.62601, 47.65096],
-                                [-122.62293, 47.65085],
-                                [-122.62125, 47.65021],
-                                [-122.62018, 47.6496],
-                                [-122.61808, 47.65015],
-                                [-122.61688, 47.65033],
-                                [-122.60984, 47.64694],
-                                [-122.60293, 47.64423],
-                                [-122.60323, 47.64191],
-                                [-122.6007, 47.63821],
-                                [-122.59268, 47.63856],
-                                [-122.59142, 47.6374],
-                                [-122.59108, 47.63396],
-                                [-122.59185, 47.62766],
-                                [-122.59571, 47.61374],
-                                [-122.59545, 47.61099],
-                                [-122.59498, 47.60955],
-                                [-122.59618, 47.60749],
-                                [-122.59826, 47.60243],
-                                [-122.59195, 47.59647],
-                                [-122.5918, 47.59498],
-                                [-122.59264, 47.59285],
-                                [-122.5935, 47.59168],
-                                [-122.59404, 47.5908],
-                                [-122.59492, 47.59003],
-                                [-122.59541, 47.58936],
-                                [-122.59571, 47.58887],
-                                [-122.5959, 47.5864],
-                                [-122.59981, 47.57909],
-                                [-122.60311, 47.57401],
-                                [-122.60775, 47.5688],
-                                [-122.61039, 47.56767],
-                                [-122.61272, 47.56735],
-                                [-122.61423, 47.56752],
-                                [-122.61508, 47.56798],
-                                [-122.6162, 47.56882],
-                                [-122.61734, 47.56963],
-                                [-122.618, 47.57032],
-                                [-122.62283, 47.56913],
-                                [-122.62259, 47.5679],
-                                [-122.62313, 47.56526],
-                                [-122.62317, 47.56439],
-                                [-122.62386, 47.56267],
-                                [-122.62454, 47.56241],
-                                [-122.62514, 47.56215],
-                                [-122.62495, 47.56128],
-                                [-122.62549, 47.56096],
-                                [-122.62784, 47.55695],
-                                [-122.63505, 47.55516],
-                                [-122.63848, 47.55261],
-                                [-122.64345, 47.55127],
-                                [-122.65632, 47.55058],
-                                [-122.6619, 47.55017],
-                                [-122.66533, 47.54878],
-                                [-122.6716, 47.54681],
-                                [-122.67297, 47.54444],
-                                [-122.67434, 47.54224],
-                                [-122.67507, 47.53818],
-                                [-122.67953, 47.53598],
-                                [-122.68314, 47.53407],
-                                [-122.69703, 47.52816],
-                                [-122.69377, 47.527],
-                                [-122.69086, 47.52659],
-                                [-122.68605, 47.52734],
-                                [-122.67833, 47.52995],
-                                [-122.66829, 47.53262],
-                                [-122.66297, 47.53957],
-                                [-122.64796, 47.53778],
-                                [-122.63886, 47.54322],
-                                [-122.63475, 47.54316],
-                                [-122.62539, 47.54397],
-                                [-122.6211, 47.54826],
-                                [-122.6181, 47.54791],
-                                [-122.60781, 47.54687],
-                                [-122.59639, 47.56054],
-                                [-122.59013, 47.56587],
-                                [-122.58224, 47.57143],
-                                [-122.58147, 47.57369],
-                                [-122.57718, 47.5749],
-                                [-122.57477, 47.57763],
-                                [-122.57186, 47.5811],
-                                [-122.56997, 47.58278],
-                                [-122.56885, 47.58509],
-                                [-122.56765, 47.59065],
-                                [-122.57383, 47.5932],
-                                [-122.57675, 47.59783],
-                                [-122.57658, 47.6031],
-                                [-122.57589, 47.60958],
-                                [-122.57495, 47.61432],
-                                [-122.57846, 47.62601],
-                                [-122.57872, 47.63752],
-                                [-122.57915, 47.64255],
-                                [-122.57692, 47.64353],
-                                [-122.5728, 47.64469],
-                                [-122.5728, 47.64608],
-                                [-122.57623, 47.64492],
-                                [-122.57941, 47.64463],
-                                [-122.58224, 47.64608],
-                                [-122.58507, 47.65117],
-                                [-122.5929, 47.66342]
-                            ]]
-                        }
-                    },
-                    "Tulalip Terminal Area": {
-                        "type": "Feature",
-                        "properties": {
-                            "name": "Tulalip Terminal Area",
-                            "description": ""
-                        },
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-122.33276, 48.07601],
-                                [-122.32186, 48.08129],
-                                [-122.31118, 48.07607],
-                                [-122.30106, 48.07186],
-                                [-122.30033, 48.07008],
-                                [-122.29956, 48.06899],
-                                [-122.29844, 48.06799],
-                                [-122.29822, 48.06649],
-                                [-122.29831, 48.06598],
-                                [-122.29762, 48.06483],
-                                [-122.29629, 48.06368],
-                                [-122.29453, 48.06231],
-                                [-122.2935, 48.0617],
-                                [-122.29119, 48.05514],
-                                [-122.29149, 48.05367],
-                                [-122.29016, 48.05218],
-                                [-122.2823, 48.0494],
-                                [-122.26943, 48.04573],
-                                [-122.27115, 48.04366],
-                                [-122.29431, 48.05258],
-                                [-122.33276, 48.07601]
-                            ]]
-                        }
-                    }
-                };
-
-                // Add custom polygon layers
-                Object.entries(customAreaPolygons).forEach(([areaName, geoJson]) => {
-                    // Find matching data for this custom area
-                    let areaData = { total: 0, surveys: 0 };
-                    if ((window.mapDataLookup || {})[areaName]) {
-                        areaData = window.mapDataLookup[areaName];
-                    }
-
-                    const intensity = Math.min(areaData.total / maxCatch, 1);
-                    const fillOpacity = 0.3 + intensity * 0.5;
-
-                    const customLayer = L.geoJSON(geoJson, {
-                        style: function(feature) {
-                            return {
-                                color: '#3182ce',
-                                weight: 2,
-                                opacity: 0.8,
-                                fillColor: '#3182ce',
-                                fillOpacity: fillOpacity
-                            };
-                        },
-                        onEachFeature: function(feature, layer) {
-                            // Store reference for selection tracking
-                            layer.areaName = areaName;
-
-                            // Hover effects
-                            layer.on('mouseover', function(e) {
-                                const isSelected = selectedAreaLayers.has(layer);
-                                if (!isSelected) {
+                                // Mouse hover effects
+                                layer.on('mouseover', function(e) {
                                     layer.setStyle({
+                                        weight: 4,
                                         fillColor: '#facc15',
                                         fillOpacity: 0.6
                                     });
-                                }
-                            });
+                                    layer.bringToFront();
+                                });
 
-                            layer.on('mouseout', function(e) {
-                                const isSelected = selectedAreaLayers.has(layer);
-                                if (!isSelected) {
-                                    layer.setStyle({
-                                        fillColor: '#3182ce',
-                                        fillOpacity: fillOpacity
-                                    });
-                                }
-                            });
+                                layer.on('mouseout', function(e) {
+                                    // Don't reset style if this is the selected area
+                                    const isSelected = selectedAreaLayers.has(layer);
+                                    const style = getStyleForFeature(feature, isSelected);
+                                    layer.setStyle(style);
+                                });
 
-                            // Click to toggle selection
-                            layer.on('click', function(e) {
-                                const catchAreaSelect = document.getElementById('catchArea');
-                                
-                                let optionFound = false;
-                                let isCurrentlySelected = false;
-                                
-                                for (let i = 0; i < catchAreaSelect.options.length; i++) {
-                                    if (catchAreaSelect.options[i].value === areaName) {
-                                        optionFound = true;
-                                        isCurrentlySelected = catchAreaSelect.options[i].selected;
-                                        catchAreaSelect.options[i].selected = !isCurrentlySelected;
-                                        break;
+                                // Click to toggle area selection
+                                layer.on('click', function(e) {
+                                    if (dbAreaName) {
+                                        const catchAreaSelect = document.getElementById('catchArea');
+
+                                        // Find the option for this area
+                                        let optionFound = false;
+                                        let isCurrentlySelected = false;
+
+                                        for (let i = 0; i < catchAreaSelect.options.length; i++) {
+                                            if (catchAreaSelect.options[i].value === dbAreaName) {
+                                                optionFound = true;
+                                                isCurrentlySelected = catchAreaSelect.options[i].selected;
+                                                // Toggle the selection
+                                                catchAreaSelect.options[i].selected = !isCurrentlySelected;
+                                                break;
+                                            }
+                                        }
+
+                                        if (optionFound) {
+                                            // Update visual styling immediately
+                                            if (!isCurrentlySelected) {
+                                                // Was not selected, now is - add to selection set
+                                                selectedAreaLayers.add(layer);
+                                                const selectedStyle = getStyleForFeature(feature, true);
+                                                layer.setStyle(selectedStyle);
+                                                layer.bringToFront();
+                                            } else {
+                                                // Was selected, now is not - remove from selection set
+                                                selectedAreaLayers.delete(layer);
+                                                const unselectedStyle = getStyleForFeature(feature, false);
+                                                layer.setStyle(unselectedStyle);
+                                            }
+
+                                            // Apply filters to update charts
+                                            applyFilters();
+                                        }
                                     }
-                                }
-                                
-                                if (optionFound) {
-                                    if (!isCurrentlySelected) {
-                                        selectedAreaLayers.add(layer);
-                                        layer.setStyle({
-                                            color: '#f59e0b',
-                                            weight: 4,
-                                            fillColor: '#fbbf24',
-                                            fillOpacity: 0.7
-                                        });
-                                        layer.bringToFront();
-                                    } else {
-                                        selectedAreaLayers.delete(layer);
-                                        layer.setStyle({
-                                            color: '#3182ce',
-                                            weight: 2,
-                                            fillColor: '#3182ce',
-                                            fillOpacity: fillOpacity
-                                        });
-                                    }
-                                    applyFilters();
-                                }
-                            });
+                                });
 
-                            // Popup
-                            const popupContent = `
-                                <div style="font-family: sans-serif;">
-                                    <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
-                                        ${areaName}
-                                    </h3>
-                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 8px;">
-                                        <p style="margin: 4px 0;"><strong>Total Catch:</strong> ${Math.round(areaData.total).toLocaleString()}</p>
-                                        <p style="margin: 4px 0;"><strong>Surveys:</strong> ${areaData.surveys.toLocaleString()}</p>
+                                // Popup content
+                                const displayName = dbAreaName || `${props.maName} (Area ${props.maNumber})`;
+
+                                const wacSection = props.WAC ?
+                                    `<p style="margin: 8px 0 4px 0; font-size: 0.85em; color: #718096;"><strong>WAC:</strong> ${props.WAC}</p>` : '';
+
+                                const popupContent = `
+                                    <div style="font-family: sans-serif;">
+                                        <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
+                                            ${displayName}
+                                        </h3>
+                                        <div style="border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                                            <p style="margin: 4px 0;"><strong>Total Catch:</strong> ${Math.round(areaData.total).toLocaleString()}</p>
+                                            <p style="margin: 4px 0;"><strong>Surveys:</strong> ${areaData.surveys.toLocaleString()}</p>
+                                        </div>
+                                        ${wacSection}
                                     </div>
-                                    <p style="margin: 8px 0 4px 0; font-size: 0.85em; color: #718096;">
-                                        <em>Custom boundary (not in WDFW GIS)</em>
-                                    </p>
-                                </div>
-                            `;
-                            layer.bindPopup(popupContent);
+                                `;
+                                layer.bindPopup(popupContent);
+                            }
+                        }).addTo(map);
+
+                        console.log('✅ Loaded marine areas from static GeoJSON file');
+
+                        // After loading marine areas, fit bounds and handle initialization
+                        // (This was previously in the 'load' event handler for Esri layers)
+                        if (!initialMapLoadComplete && mapLayers.length > 0) {
+                            const group = L.featureGroup(mapLayers);
+                            const bounds = group.getBounds();
+                            if (bounds.isValid()) {
+                                map.fitBounds(bounds, { padding: [20, 20] });
+                                initialMapLoadComplete = true;
+                            }
                         }
-                    }).addTo(map);
 
-                    // Bring custom layer to front so it's clickable above GIS layers
-                    customLayer.bringToFront();
-
-                    // Store reference
-                    if (!window.customAreaLayers) {
-                        window.customAreaLayers = {};
-                    }
-                    window.customAreaLayers[areaName] = customLayer;
-                });
-
-
-                // Handle loading events
-                marineAreasLayer.on('load', function(e) {
-
-                    // Only fit bounds on initial load to prevent zoom reset
-                    if (!initialMapLoadComplete && mapLayers.length > 0) {
-                        const group = L.featureGroup(mapLayers);
-                        const bounds = group.getBounds();
-                        if (bounds.isValid()) {
-                            map.fitBounds(bounds, { padding: [20, 20] });
-                            initialMapLoadComplete = true;
+                        // Bring custom layers to front so they're above GIS layers
+                        if (window.customAreaLayers) {
+                            Object.values(window.customAreaLayers).forEach(layer => {
+                                layer.bringToFront();
+                            });
                         }
-                    }
-                    
-                    // Bring custom layers to front so they're above GIS layers
-                    if (window.customAreaLayers) {
-                        Object.values(window.customAreaLayers).forEach(layer => {
-                            layer.bringToFront();
-                        });
-                    }
-                });
-
-                marineAreasLayer.on('error', function(e) {
-                    console.error('Error loading marine areas:', e);
-                    document.getElementById('map').innerHTML = 
-                        '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading WDFW marine area data. Check console for details.</div>';
-                });
+                    })
+                    .catch(error => {
+                        console.error('Error loading marine areas:', error);
+                        document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading marine areas. Please refresh the page.</div>';
+                    });
 
                 // Force map resize
                 setTimeout(() => {
