@@ -520,6 +520,121 @@ let charts = {};
                         document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading marine areas. Please refresh the page.</div>';
                     });
 
+
+                // Add custom area polygons for areas not in WDFW GIS layer
+                // (Loaded from custom-areas.js)
+                Object.entries(customAreaPolygons).forEach(([areaName, geoJson]) => {
+                    // Find matching data for this custom area
+                    let areaData = { total: 0, surveys: 0 };
+                    if ((window.mapDataLookup || {})[areaName]) {
+                        areaData = window.mapDataLookup[areaName];
+                    }
+
+                    const intensity = Math.min(areaData.total / maxCatch, 1);
+                    const fillOpacity = 0.3 + intensity * 0.5;
+
+                    const customLayer = L.geoJSON(geoJson, {
+                        style: function(feature) {
+                            return {
+                                color: '#3182ce',
+                                weight: 2,
+                                opacity: 0.8,
+                                fillColor: '#3182ce',
+                                fillOpacity: fillOpacity
+                            };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            // Store reference for selection tracking
+                            layer.areaName = areaName;
+
+                            // Hover effects
+                            layer.on('mouseover', function(e) {
+                                const isSelected = selectedAreaLayers.has(layer);
+                                if (!isSelected) {
+                                    layer.setStyle({
+                                        fillColor: '#facc15',
+                                        fillOpacity: 0.6
+                                    });
+                                }
+                            });
+
+                            layer.on('mouseout', function(e) {
+                                const isSelected = selectedAreaLayers.has(layer);
+                                if (!isSelected) {
+                                    layer.setStyle({
+                                        fillColor: '#3182ce',
+                                        fillOpacity: fillOpacity
+                                    });
+                                }
+                            });
+
+                            // Click to toggle selection
+                            layer.on('click', function(e) {
+                                const catchAreaSelect = document.getElementById('catchArea');
+
+                                let optionFound = false;
+                                let isCurrentlySelected = false;
+
+                                for (let i = 0; i < catchAreaSelect.options.length; i++) {
+                                    if (catchAreaSelect.options[i].value === areaName) {
+                                        optionFound = true;
+                                        isCurrentlySelected = catchAreaSelect.options[i].selected;
+                                        catchAreaSelect.options[i].selected = !isCurrentlySelected;
+                                        break;
+                                    }
+                                }
+
+                                if (optionFound) {
+                                    if (!isCurrentlySelected) {
+                                        selectedAreaLayers.add(layer);
+                                        layer.setStyle({
+                                            color: '#f59e0b',
+                                            weight: 4,
+                                            fillColor: '#fbbf24',
+                                            fillOpacity: 0.7
+                                        });
+                                        layer.bringToFront();
+                                    } else {
+                                        selectedAreaLayers.delete(layer);
+                                        layer.setStyle({
+                                            color: '#3182ce',
+                                            weight: 2,
+                                            fillColor: '#3182ce',
+                                            fillOpacity: fillOpacity
+                                        });
+                                    }
+                                    applyFilters();
+                                }
+                            });
+
+                            // Popup
+                            const popupContent = `
+                                <div style="font-family: sans-serif;">
+                                    <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
+                                        ${areaName}
+                                    </h3>
+                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                                        <p style="margin: 4px 0;"><strong>Total Catch:</strong> ${Math.round(areaData.total).toLocaleString()}</p>
+                                        <p style="margin: 4px 0;"><strong>Surveys:</strong> ${areaData.surveys.toLocaleString()}</p>
+                                    </div>
+                                    <p style="margin: 8px 0 4px 0; font-size: 0.85em; color: #718096;">
+                                        <em>Custom boundary (not in WDFW GIS)</em>
+                                    </p>
+                                </div>
+                            `;
+                            layer.bindPopup(popupContent);
+                        }
+                    }).addTo(map);
+
+                    // Bring custom layer to front so it's clickable above GIS layers
+                    customLayer.bringToFront();
+
+                    // Store reference
+                    if (!window.customAreaLayers) {
+                        window.customAreaLayers = {};
+                    }
+                    window.customAreaLayers[areaName] = customLayer;
+                });
                 // Force map resize
                 setTimeout(() => {
                     if (map) {
