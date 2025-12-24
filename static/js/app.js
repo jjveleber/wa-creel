@@ -4,8 +4,9 @@ let charts = {};
         let marineAreasLayer = null; // Store the Esri feature layer
         let selectedAreaLayers = new Set(); // Track all selected areas
         let initialMapLoadComplete = false; // Prevent zoom reset on pan/zoom
-        let currentFilters = { 
-            time_unit: 'yearly', 
+        let areaNumberToDbName = {}; // Mapping from area number to database area name
+        let currentFilters = {
+            time_unit: 'yearly',
             species: ['chinook', 'coho', 'chum', 'pink', 'sockeye'],
             catch_area: []
         };
@@ -44,6 +45,18 @@ let charts = {};
                     opt.textContent = area;
                     catchArea.appendChild(opt);
                 });
+
+                // Build mapping from area number to database area name
+                areaNumberToDbName = {};
+                options.areas.forEach(area => {
+                    // Extract area number from names like "Area 4, Eastern portion"
+                    const match = area.match(/^Area\s+(\d+),/);
+                    if (match) {
+                        const areaNum = match[1];
+                        areaNumberToDbName[areaNum] = area;
+                    }
+                });
+                console.log("✅ Built area number mapping:", Object.keys(areaNumberToDbName).length, "areas");
             } catch (err) {
                 console.error('Error loading filter options:', err);
             }
@@ -86,6 +99,231 @@ let charts = {};
             return result;
         }
 
+        // ==========================================
+        // FILTER PERSISTENCE (localStorage)
+        // ==========================================
+
+        function saveFilterSettings() {
+            try {
+                const filters = {
+                    yearStart: document.getElementById('yearStart').value,
+                    yearEnd: document.getElementById('yearEnd').value,
+                    catchAreas: getSelectValues(document.getElementById('catchArea')),
+                    species: getSelectValues(document.getElementById('species')),
+                    timeUnit: document.getElementById('timeUnit').value,
+                    timestamp: new Date().toISOString()
+                };
+
+                localStorage.setItem('wdfw_creel_filters', JSON.stringify(filters));
+                console.log('✅ Saved filter settings:', filters);
+            } catch (error) {
+                console.error('Error saving filter settings:', error);
+            }
+        }
+
+        function loadFilterSettings() {
+            try {
+                const saved = localStorage.getItem('wdfw_creel_filters');
+                if (!saved) {
+                    console.log('No saved filter settings found');
+                    return null;
+                }
+
+                const filters = JSON.parse(saved);
+                console.log('✅ Loaded filter settings:', filters);
+                return filters;
+            } catch (error) {
+                console.error('Error loading filter settings:', error);
+                return null;
+            }
+        }
+
+        function applyFilterSettings(filters) {
+            if (!filters) return;
+
+            try {
+                // Apply year start
+                if (filters.yearStart) {
+                    const yearStartSelect = document.getElementById('yearStart');
+                    for (let i = 0; i < yearStartSelect.options.length; i++) {
+                        if (yearStartSelect.options[i].value === filters.yearStart) {
+                            yearStartSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Apply year end
+                if (filters.yearEnd) {
+                    const yearEndSelect = document.getElementById('yearEnd');
+                    for (let i = 0; i < yearEndSelect.options.length; i++) {
+                        if (yearEndSelect.options[i].value === filters.yearEnd) {
+                            yearEndSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Apply catch area selections
+                const catchAreaSelect = document.getElementById('catchArea');
+                if (filters.catchAreas && filters.catchAreas.length > 0) {
+                    for (let i = 0; i < catchAreaSelect.options.length; i++) {
+                        const option = catchAreaSelect.options[i];
+                        option.selected = filters.catchAreas.includes(option.value);
+                    }
+                }
+
+                // Apply species selections
+                const speciesSelect = document.getElementById('species');
+                if (filters.species && filters.species.length > 0) {
+                    for (let i = 0; i < speciesSelect.options.length; i++) {
+                        const option = speciesSelect.options[i];
+                        option.selected = filters.species.includes(option.value);
+                    }
+                }
+
+                // Apply time unit
+                if (filters.timeUnit) {
+                    document.getElementById('timeUnit').value = filters.timeUnit;
+                }
+
+                console.log('✅ Applied saved filters');
+
+                // Trigger filter update to reload data
+                applyFilters();
+
+            } catch (error) {
+                console.error('Error applying filter settings:', error);
+            }
+        }
+
+        function clearFilterSettings() {
+            try {
+                localStorage.removeItem('wdfw_creel_filters');
+                console.log('✅ Cleared saved filter settings');
+            } catch (error) {
+                console.error('Error clearing filter settings:', error);
+            }
+        }
+
+        function updateMapSelection() {
+            // Update map layer styling based on currently selected areas in dropdown
+            if (!map || !mapLayers || mapLayers.length === 0) {
+                console.log('⏳ Map not ready yet for selection update');
+                return;
+            }
+
+            try {
+                const catchAreaSelect = document.getElementById('catchArea');
+                if (!catchAreaSelect) return;
+
+                const selectedAreas = Array.from(catchAreaSelect.selectedOptions).map(opt => opt.value);
+                console.log('🗺️ Updating map selection:', selectedAreas);
+
+                // Clear selection tracking
+                selectedAreaLayers.clear();
+
+                // Update WDFW layers
+                mapLayers.forEach(layer => {
+                    const props = layer.feature.properties;
+                    const gisAreaNumber = props.maNumber;
+                    const gisAreaName = props.maName;
+
+                    // Find matching database area name
+                    let dbAreaName = null;
+                    if (window.mapDataLookup && window.mapDataLookup[gisAreaName]) {
+                        dbAreaName = gisAreaName;
+                    } else {
+                        const searchPattern = `Area ${gisAreaNumber},`;
+                        for (const dbName of Object.keys(window.mapDataLookup || {})) {
+                            if (dbName.startsWith(searchPattern)) {
+                                dbAreaName = dbName;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback: use canonical mapping if not found in current data
+                    if (!dbAreaName && gisAreaNumber && areaNumberToDbName[gisAreaNumber]) {
+                        dbAreaName = areaNumberToDbName[gisAreaNumber];
+                    }
+
+                    // Check if selected
+                    const isSelected = dbAreaName && selectedAreas.includes(dbAreaName);
+
+                    // Update styling
+                    if (isSelected) {
+                        selectedAreaLayers.add(layer);
+                        layer.setStyle({
+                            color: '#f59e0b',
+                            weight: 4,
+                            opacity: 1,
+                            fillColor: '#fbbf24',
+                            fillOpacity: 0.7
+                        });
+                    } else {
+                        // Get data for intensity-based coloring
+                        let areaData = { total: 0, surveys: 0 };
+                        if (window.mapDataLookup && dbAreaName && window.mapDataLookup[dbAreaName]) {
+                            areaData = window.mapDataLookup[dbAreaName];
+                        }
+                        const maxCatch = Math.max(...Object.values(window.mapDataLookup || {}).map(d => d.total || 0), 1);
+                        const intensity = Math.min(areaData.total / maxCatch, 1);
+                        const fillOpacity = 0.3 + intensity * 0.5;
+
+                        layer.setStyle({
+                            color: '#3182ce',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillColor: '#60a5fa',
+                            fillOpacity: fillOpacity
+                        });
+                    }
+                });
+
+                // Update custom area layers
+                if (window.customAreaLayers) {
+                    Object.entries(window.customAreaLayers).forEach(([areaName, layerGroup]) => {
+                        const isSelected = selectedAreas.includes(areaName);
+
+                        layerGroup.eachLayer(function(layer) {
+                            if (isSelected) {
+                                selectedAreaLayers.add(layer);
+                                layer.setStyle({
+                                    color: '#f59e0b',
+                                    weight: 4,
+                                    fillColor: '#fbbf24',
+                                    fillOpacity: 0.7
+                                });
+                            } else {
+                                // Get data for intensity-based coloring
+                                let areaData = { total: 0, surveys: 0 };
+                                if (window.mapDataLookup && window.mapDataLookup[areaName]) {
+                                    areaData = window.mapDataLookup[areaName];
+                                }
+                                const maxCatch = Math.max(...Object.values(window.mapDataLookup || {}).map(d => d.total || 0), 1);
+                                const intensity = Math.min(areaData.total / maxCatch, 1);
+                                const fillOpacity = 0.3 + intensity * 0.5;
+
+                                layer.setStyle({
+                                    color: '#3182ce',
+                                    weight: 2,
+                                    fillColor: '#3182ce',
+                                    fillOpacity: fillOpacity
+                                });
+                            }
+                        });
+                    });
+                }
+
+                console.log('✅ Map selection updated');
+            } catch (error) {
+                console.error('Error updating map selection:', error);
+            }
+        }
+
+
+
         function applyFilters() {
             currentFilters = {
                 year_start: document.getElementById('yearStart').value,
@@ -94,10 +332,15 @@ let charts = {};
                 species: getSelectValues(document.getElementById('species')),
                 time_unit: document.getElementById('timeUnit').value || 'yearly'
             };
-            loadData();
+
+            saveFilterSettings();  // Save settings to localStorage
+
+            loadData();  // Load updated data
         }
 
         function resetFilters() {
+            clearFilterSettings();  // Clear saved filter settings from localStorage
+
             document.getElementById('yearStart').selectedIndex = 0;
             document.getElementById('yearEnd').selectedIndex = 0;
 
@@ -115,11 +358,12 @@ let charts = {};
             }
 
             document.getElementById('timeUnit').value = 'yearly';
-            currentFilters = { 
-                time_unit: 'yearly', 
+            currentFilters = {
+                time_unit: 'yearly',
                 species: ['chinook', 'coho', 'chum', 'pink', 'sockeye'],
                 catch_area: []
             };
+
             loadData();
         }
 
@@ -173,7 +417,6 @@ let charts = {};
                 return;
             }
 
-
             try {
                 // Initialize map if not already created
                 if (!map) {
@@ -203,8 +446,8 @@ let charts = {};
                     map.getPane('wdfwPane').style.zIndex = 400;         // WDFW areas on bottom
                     map.getPane('customAreasPane').style.zIndex = 450;  // Custom areas on top
 
-                    // Disable pointer events on WDFW pane to prevent hover flicker
-                    map.getPane('wdfwPane').style.pointerEvents = 'none';
+                    // Enable pointer events on both panes
+                    map.getPane('wdfwPane').style.pointerEvents = 'auto';  // Enable clicks on WDFW areas
                     map.getPane('customAreasPane').style.pointerEvents = 'auto';
 
                 }
@@ -215,18 +458,8 @@ let charts = {};
                     dataMap[d.area] = d;
                 });
 
-
                 // Find max catch for color scaling
                 const maxCatch = Math.max(...data.map(d => d.total), 1);
-
-
-                // Helper function to calculate style
-                // Extract area number from database area name (e.g., "Area 13, South..." -> "13")
-                function extractAreaNumber(areaName) {
-                    if (!areaName) return null;
-                    const match = areaName.match(/^Area\\s+([\\d-]+),/);
-                    return match ? match[1] : null;
-                }
 
                 // Helper function to calculate style
                 function getStyleForFeature(feature, isSelected = false) {
@@ -259,10 +492,10 @@ let charts = {};
 
                     if (isSelected) {
                         return {
-                            color: '#f59e0b',      // Amber-500 for selected border
+                            color: '#f59e0b',
                             weight: 4,
                             opacity: 1,
-                            fillColor: '#fbbf24',  // Amber-400 for selected fill
+                            fillColor: '#fbbf24',
                             fillOpacity: 0.7
                         };
                     }
@@ -376,8 +609,6 @@ let charts = {};
                                     });
                                 }
                             });
-
-                            layerGroup.bringToFront();
                         });
                     }
 
@@ -407,13 +638,13 @@ let charts = {};
                                 let dbAreaName = null;
                                 let areaData = { total: 0, surveys: 0 };
 
-                                // First, try exact name match (for custom areas like "Bellingham Bay")
+                                // First, try exact name match
                                 const gisAreaName = props.maName;
                                 if (window.mapDataLookup && window.mapDataLookup[gisAreaName]) {
                                     dbAreaName = gisAreaName;
                                     areaData = window.mapDataLookup[gisAreaName];
                                 } else {
-                                    // If no exact match, try pattern "Area {number}," matching
+                                    // If no exact match, try pattern matching
                                     const searchPattern = `Area ${gisAreaNumber},`;
                                     for (const [dbName, dbData] of Object.entries(window.mapDataLookup || {})) {
                                         if (dbName.startsWith(searchPattern)) {
@@ -424,7 +655,15 @@ let charts = {};
                                     }
                                 }
 
-                                if (!dbAreaName) {
+                                // Fallback: use canonical mapping from area number to database name
+                                if (!dbAreaName && gisAreaNumber) {
+                                    if (areaNumberToDbName[gisAreaNumber]) {
+                                        // Use exact database name from mapping
+                                        dbAreaName = areaNumberToDbName[gisAreaNumber];
+                                    } else if (gisAreaName) {
+                                        // Last resort: construct from GIS properties
+                                        dbAreaName = `Area ${gisAreaNumber}, ${gisAreaName}`;
+                                    }
                                 }
 
                                 mapLayers.push(layer);
@@ -439,7 +678,6 @@ let charts = {};
                                 });
 
                                 layer.on('mouseout', function(e) {
-                                    // Don't reset style if this is the selected area
                                     const isSelected = selectedAreaLayers.has(layer);
                                     const style = getStyleForFeature(feature, isSelected);
                                     layer.setStyle(style);
@@ -450,7 +688,6 @@ let charts = {};
                                     if (dbAreaName) {
                                         const catchAreaSelect = document.getElementById('catchArea');
 
-                                        // Find the option for this area
                                         let optionFound = false;
                                         let isCurrentlySelected = false;
 
@@ -458,27 +695,22 @@ let charts = {};
                                             if (catchAreaSelect.options[i].value === dbAreaName) {
                                                 optionFound = true;
                                                 isCurrentlySelected = catchAreaSelect.options[i].selected;
-                                                // Toggle the selection
                                                 catchAreaSelect.options[i].selected = !isCurrentlySelected;
                                                 break;
                                             }
                                         }
 
                                         if (optionFound) {
-                                            // Update visual styling immediately
                                             if (!isCurrentlySelected) {
-                                                // Was not selected, now is - add to selection set
                                                 selectedAreaLayers.add(layer);
                                                 const selectedStyle = getStyleForFeature(feature, true);
                                                 layer.setStyle(selectedStyle);
                                             } else {
-                                                // Was selected, now is not - remove from selection set
                                                 selectedAreaLayers.delete(layer);
                                                 const unselectedStyle = getStyleForFeature(feature, false);
                                                 layer.setStyle(unselectedStyle);
                                             }
 
-                                            // Apply filters to update charts
                                             applyFilters();
                                         }
                                     }
@@ -508,8 +740,7 @@ let charts = {};
 
                         console.log('✅ Loaded marine areas from static GeoJSON file');
 
-                        // After loading marine areas, fit bounds and handle initialization
-                        // (This was previously in the 'load' event handler for Esri layers)
+                        // After loading marine areas, fit bounds
                         if (!initialMapLoadComplete && mapLayers.length > 0) {
                             const group = L.featureGroup(mapLayers);
                             const bounds = group.getBounds();
@@ -519,22 +750,16 @@ let charts = {};
                             }
                         }
 
-                        // Bring custom layers to front so they're above GIS layers
-                        if (window.customAreaLayers) {
-                            Object.values(window.customAreaLayers).forEach(layer => {
-                            });
-                        }
+                        // Update map selection to match any saved filters
+                        updateMapSelection();
                     })
                     .catch(error => {
                         console.error('Error loading marine areas:', error);
                         document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading marine areas. Please refresh the page.</div>';
                     });
 
-
                 // Add custom area polygons for areas not in WDFW GIS layer
-                // (Loaded from custom-areas.js)
                 Object.entries(customAreaPolygons).forEach(([areaName, geoJson]) => {
-                    // Find matching data for this custom area
                     let areaData = { total: 0, surveys: 0 };
                     if ((window.mapDataLookup || {})[areaName]) {
                         areaData = window.mapDataLookup[areaName];
@@ -555,12 +780,10 @@ let charts = {};
                             };
                         },
                         onEachFeature: function(feature, layer) {
-                            // Store reference for selection tracking
                             layer.areaName = areaName;
 
-                            // Hover effects - STOP EVENT PROPAGATION
                             layer.on('mouseover', function(e) {
-                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
+                                L.DomEvent.stopPropagation(e);
                                 const isSelected = selectedAreaLayers.has(layer);
                                 if (!isSelected) {
                                     layer.setStyle({
@@ -571,7 +794,7 @@ let charts = {};
                             });
 
                             layer.on('mouseout', function(e) {
-                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
+                                L.DomEvent.stopPropagation(e);
                                 const isSelected = selectedAreaLayers.has(layer);
                                 if (!isSelected) {
                                     layer.setStyle({
@@ -581,9 +804,8 @@ let charts = {};
                                 }
                             });
 
-                            // Click to toggle selection - STOP EVENT PROPAGATION
                             layer.on('click', function(e) {
-                                L.DomEvent.stopPropagation(e);  // Prevent event from reaching layers below
+                                L.DomEvent.stopPropagation(e);
                                 const catchAreaSelect = document.getElementById('catchArea');
 
                                 let optionFound = false;
@@ -620,7 +842,6 @@ let charts = {};
                                 }
                             });
 
-                            // Popup
                             const popupContent = `
                                 <div style="font-family: sans-serif;">
                                     <h3 style="margin: 0 0 8px 0; color: #2d3748; font-size: 1.1em;">
@@ -639,14 +860,12 @@ let charts = {};
                         }
                     }).addTo(map);
 
-                    // Bring custom layer to front so it's clickable above GIS layers
-
-                    // Store reference
                     if (!window.customAreaLayers) {
                         window.customAreaLayers = {};
                     }
                     window.customAreaLayers[areaName] = customLayer;
                 });
+
                 // Force map resize
                 setTimeout(() => {
                     if (map) {
@@ -656,19 +875,18 @@ let charts = {};
 
             } catch (error) {
                 console.error('Error creating map:', error);
-                document.getElementById('map').innerHTML = 
+                document.getElementById('map').innerHTML =
                     '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading map: ' + error.message + '</div>';
             }
         }
+
         function createTrendChart(data) {
             const ctx = document.getElementById('trendChart').getContext('2d');
 
-            // Destroy existing chart if it exists
             if (charts.trend) {
                 charts.trend.destroy();
             }
 
-            // Define colors for each species
             const speciesColors = {
                 'chinook': { border: '#e53e3e', bg: 'rgba(229, 62, 62, 0.1)' },
                 'coho': { border: '#3182ce', bg: 'rgba(49, 130, 206, 0.1)' },
@@ -679,7 +897,6 @@ let charts = {};
                 'halibut': { border: '#dd6b20', bg: 'rgba(221, 107, 32, 0.1)' }
             };
 
-            // Build datasets based on what species are in the data
             const datasets = [];
             if (data.length > 0) {
                 const sampleData = data[0];
@@ -707,7 +924,7 @@ let charts = {};
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { legend: { position: 'top' } },
-                    scales: { 
+                    scales: {
                         y: { beginAtZero: true },
                         x: {
                             ticks: {
@@ -725,7 +942,6 @@ let charts = {};
         function createSpeciesChart(data) {
             const ctx = document.getElementById('speciesChart').getContext('2d');
 
-            // Destroy existing chart if it exists
             if (charts.species) {
                 charts.species.destroy();
             }
@@ -758,7 +974,6 @@ let charts = {};
         function createAreaChart(data) {
             const ctx = document.getElementById('areaChart').getContext('2d');
 
-            // Destroy existing chart if it exists
             if (charts.area) {
                 charts.area.destroy();
             }
@@ -787,7 +1002,6 @@ let charts = {};
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const ctx = document.getElementById('monthlyChart').getContext('2d');
 
-            // Destroy existing chart if it exists
             if (charts.monthly) {
                 charts.monthly.destroy();
             }
@@ -811,16 +1025,13 @@ let charts = {};
             });
         }
 
-        // Load data on page load
-        // Check for data updates automatically
         async function checkForUpdates() {
             try {
                 const response = await fetch('/api/update');
                 const data = await response.json();
-                
+
                 if (data.updated) {
                     console.log('✅ Data updated:', data.message);
-                    // Reload data after successful update
                     setTimeout(() => {
                         loadData();
                     }, 1000);
@@ -834,16 +1045,19 @@ let charts = {};
             }
         }
 
-
         async function init() {
-            // Start update check (don't wait for it)
             checkForUpdates();
-            
-            // Load filter options and data in parallel
+
             await Promise.all([
                 loadFilterOptions(),
                 loadData()
             ]);
+
+            // Load and apply saved filter settings
+            const savedFilters = loadFilterSettings();
+            if (savedFilters) {
+                applyFilterSettings(savedFilters);
+            }
         }
 
         init();
