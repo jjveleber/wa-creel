@@ -252,8 +252,9 @@ class WDFWCreelCollector:
 
         while sample_date <= max_years:
             # Calculate year for display
-            current_year = 2025
-            data_year = current_year - sample_date
+            current_year = datetime.now().year
+            data_year = current_year - (sample_date - 1)
+            print(f"🗓️  Fetching data for year: {data_year}")
 
             url = f"{self.BASE_URL}?sample_date={sample_date}&ramp=&catch_area=&page&_format=csv"
 
@@ -274,7 +275,8 @@ class WDFWCreelCollector:
 
                 if not data:
                     print("❌ No data returned")
-                    break
+                    sample_date += 1
+                    continue
 
                 # Insert or update records
                 batch_new = 0
@@ -554,9 +556,11 @@ def main():
             sample_date = int(sys.argv[2]) if len(sys.argv) > 2 else 10
             collector.inspect_csv(sample_date)
         else:
-            # Note: WDFW API returns duplicate current-year data for sample_date > 13
-            # Actual data only available from 2012-present (samples 1-13)
-            collector.fetch_all_data(max_years=13)
+            # Calculate how many years to fetch from current year back to 2013
+            current_year = datetime.now().year
+            max_years = current_year - 2013 +1
+            print(f"Fetching data from {current_year} back to 2013 ({max_years} years)")
+            collector.fetch_all_data(max_years=max_years)
     except KeyboardInterrupt:
         print("\n\n⚠️ Interrupted by user")
     except Exception as e:

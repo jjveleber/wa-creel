@@ -160,6 +160,41 @@
     }
     </script>
 
+    <script>
+  // Update year dynamically in meta tags and structured data
+  (function() {
+    const currentYear = new Date().getFullYear();
+    const yearRange = `2013-${currentYear}`;
+
+    // Update meta descriptions
+    document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[property="twitter:description"]').forEach(meta => {
+      if (meta.content.includes('2013-2025')) {
+        meta.content = meta.content.replace('2013-2025', yearRange);
+      }
+    });
+
+    // Update JSON-LD structured data
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    scripts.forEach(script => {
+      if (script.textContent.includes('2013-2025') || script.textContent.includes('2013/2025')) {
+        const data = JSON.parse(script.textContent);
+        const updated = JSON.stringify(data)
+          .replace(/2013-2025/g, yearRange)
+          .replace(/2013\/2025/g, `2013/${currentYear}`);
+        script.textContent = updated;
+      }
+    });
+
+    // Update canvas aria-label
+    const chart = document.getElementById('trendChart');
+    if (chart) {
+      chart.setAttribute('aria-label',
+        `Line chart showing salmon catch trends over time from 2013 to ${currentYear}`
+      );
+    }
+  })();
+</script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="

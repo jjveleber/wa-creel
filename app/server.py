@@ -517,8 +517,12 @@ Sitemap: https://wa-creel.jeremyveleber.com/sitemap.xml
             collector = WDFWCreelCollector()
 
             try:
+                # Calculate how many years to fetch from current year back to 2013
+                current_year = datetime.now().year
+                max_years = current_year - 2013 + 1
+
                 # Fetch data
-                collector.fetch_all_data(max_years=13)
+                collector.fetch_all_data(max_years=max_years)
 
                 # Record update time
                 database.set_last_update_time()
