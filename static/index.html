@@ -205,14 +205,103 @@
 
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
+    <style>
+        header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .header-logo {
+            flex-shrink: 0;
+        }
+        .header-logo img {
+            width: 120px;
+            height: auto;
+        }
+        .header-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .header-text h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            line-height: 1.2;
+        }
+        .header-text .subtitle {
+            margin: 0;
+            font-size: 1rem;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .header-logo img {
+                width: 100px;
+            }
+            .header-text h1 {
+                font-size: 1.3rem;
+            }
+            .header-text .subtitle {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 <body>
     <div class="container">
 <header>
-    <h1>🎣 WDFW Puget Sound Creel Data Dashboard</h1>
-    <p class="subtitle">Interactive visualization of saltwater fishing survey data</p>
+    <div class="header-logo">
+        <img src="/static/pnw-creel-logo.png" alt="PNW Creel - Saltwater Fishing Data" width="400" height="400" />
+    </div>
+    <div class="header-text">
+        <h1>WDFW Puget Sound Interactive Creel Survey Dashboard</h1>
+        <p class="subtitle">Interactive visualization of saltwater fishing survey data</p>
+    </div>
 </header>
-
 <div class="loading" id="loading">Loading data from database...</div>
+<script>
+  // Random loading taglines
+  (function() {
+    const taglines = [
+      "Warming up the kicker… hold tight.",
+      "Checking tides, bait, and bad decisions.",
+      "Untangling the downrigger cables…",
+      "Bribing the salmon gods…",
+      "Counting how many seals stole your fish…",
+      "Sorting through questionable creel reports…",
+      "Reeling in the data — don't horse it!",
+      "Asking WDFW why the regs are so confusing…",
+      "Dodging crab pots and loading stats…",
+      "Pretending we didn't forget the net…",
+      "Scanning for bait balls and good vibes…",
+      "Checking if the bite is real or just rumors.",
+      "Consulting the orcas for intel…",
+      "Avoiding ferry wakes while loading…",
+      "Asking Point No Point for its secrets…",
+      "Counting how many boats are at Possession Bar…",
+      "Checking if the Coho are actually in yet…",
+      "Looking for that one guy who always limits…",
+      "Calling every ramp in MA 9 for gossip…",
+      "Measuring the fog layer over Shilshole…",
+      "Seeing if the pinks are clogging the Sound again…",
+      "Loading… unlike your buddy who slept in.",
+      "Trying to remember where we hid the good hoochies…",
+      "Checking if your line is actually tied right…",
+      "Wondering why the fish only bite when you're not looking…",
+      "Pretending we didn't forget the drain plug…",
+      "Asking the fish politely to cooperate…",
+      "Loading… slower than a barbless hook set.",
+      "Sorting through all the 'should've been here yesterday' reports…"
+    ];
+
+    const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
+    document.getElementById('loading').textContent = randomTagline;
+  })();
+</script>
 <div class="error" id="error"></div>
 
 <div id="dashboard" style="display: none;">
