@@ -334,6 +334,16 @@ let charts = {};
             };
 
             saveFilterSettings();  // Save settings to localStorage
+            // Track filter changes in Google Analytics
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'filter_change', {
+                    'year_start': currentFilters.year_start || 'all',
+                    'year_end': currentFilters.year_end || 'all',
+                    'species_count': currentFilters.species.length,
+                    'area_count': currentFilters.catch_area.length,
+                    'time_unit': currentFilters.time_unit
+                });
+            }
 
             loadData();  // Load updated data
         }
@@ -364,6 +374,12 @@ let charts = {};
                 catch_area: []
             };
 
+            // Track filter reset
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'filter_reset', {
+                    'action': 'reset_to_defaults'
+                });
+            }
             loadData();
         }
 
@@ -822,6 +838,13 @@ let charts = {};
 
                                 if (optionFound) {
                                     if (!isCurrentlySelected) {
+                                        // Track map area selection
+                                        if (typeof gtag !== 'undefined') {
+                                            gtag('event', 'map_area_selected', {
+                                                'area': areaName,
+                                                'action': 'select'
+                                            });
+                                        }
                                         selectedAreaLayers.add(layer);
                                         layer.setStyle({
                                             color: '#f59e0b',
@@ -830,6 +853,13 @@ let charts = {};
                                             fillOpacity: 0.7
                                         });
                                     } else {
+                                        // Track map area deselection
+                                        if (typeof gtag !== 'undefined') {
+                                            gtag('event', 'map_area_selected', {
+                                                'area': areaName,
+                                                'action': 'deselect'
+                                            });
+                                        }
                                         selectedAreaLayers.delete(layer);
                                         layer.setStyle({
                                             color: '#3182ce',
