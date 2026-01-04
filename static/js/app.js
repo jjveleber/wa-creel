@@ -336,12 +336,38 @@ let charts = {};
             saveFilterSettings();  // Save settings to localStorage
             // Track filter changes in Google Analytics
             if (typeof gtag !== 'undefined') {
+                // Get actual filter values
+                const speciesList = currentFilters.species.join(',') || 'none';
+                const areasList = currentFilters.catch_area.slice(0, 5).join(',') || 'all_areas'; // Limit to first 5 for parameter size
+                const yearRange = (currentFilters.year_start || 'all') + '-' + (currentFilters.year_end || 'all');
+
                 gtag('event', 'filter_change', {
+                    // Year range
                     'year_start': currentFilters.year_start || 'all',
                     'year_end': currentFilters.year_end || 'all',
+                    'year_range': yearRange,
+
+                    // Species details
+                    'species_selected': speciesList,
                     'species_count': currentFilters.species.length,
+
+                    // Area details
+                    'areas_selected': areasList,
                     'area_count': currentFilters.catch_area.length,
-                    'time_unit': currentFilters.time_unit
+
+                    // Time unit
+                    'time_unit': currentFilters.time_unit,
+
+                    // Common combinations for quick analysis
+                    'has_chinook': currentFilters.species.includes('chinook'),
+                    'has_coho': currentFilters.species.includes('coho'),
+                    'single_species': currentFilters.species.length === 1,
+                    'all_salmon': currentFilters.species.length === 5 &&
+                                  currentFilters.species.includes('chinook') &&
+                                  currentFilters.species.includes('coho') &&
+                                  currentFilters.species.includes('chum') &&
+                                  currentFilters.species.includes('pink') &&
+                                  currentFilters.species.includes('sockeye')
                 });
             }
 
