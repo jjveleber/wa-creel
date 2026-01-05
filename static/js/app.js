@@ -334,42 +334,6 @@ let charts = {};
             };
 
             saveFilterSettings();  // Save settings to localStorage
-            // Track filter changes in Google Analytics
-            if (typeof gtag !== 'undefined') {
-                // Get actual filter values
-                const speciesList = currentFilters.species.join(',') || 'none';
-                const areasList = currentFilters.catch_area.slice(0, 5).join(',') || 'all_areas'; // Limit to first 5 for parameter size
-                const yearRange = (currentFilters.year_start || 'all') + '-' + (currentFilters.year_end || 'all');
-
-                gtag('event', 'filter_change', {
-                    // Year range
-                    'year_start': currentFilters.year_start || 'all',
-                    'year_end': currentFilters.year_end || 'all',
-                    'year_range': yearRange,
-
-                    // Species details
-                    'species_selected': speciesList,
-                    'species_count': currentFilters.species.length,
-
-                    // Area details
-                    'areas_selected': areasList,
-                    'area_count': currentFilters.catch_area.length,
-
-                    // Time unit
-                    'time_unit': currentFilters.time_unit,
-
-                    // Common combinations for quick analysis
-                    'has_chinook': currentFilters.species.includes('chinook'),
-                    'has_coho': currentFilters.species.includes('coho'),
-                    'single_species': currentFilters.species.length === 1,
-                    'all_salmon': currentFilters.species.length === 5 &&
-                                  currentFilters.species.includes('chinook') &&
-                                  currentFilters.species.includes('coho') &&
-                                  currentFilters.species.includes('chum') &&
-                                  currentFilters.species.includes('pink') &&
-                                  currentFilters.species.includes('sockeye')
-                });
-            }
 
             loadData();  // Load updated data
         }
@@ -400,12 +364,6 @@ let charts = {};
                 catch_area: []
             };
 
-            // Track filter reset
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'filter_reset', {
-                    'action': 'reset_to_defaults'
-                });
-            }
             loadData();
         }
 
@@ -864,13 +822,6 @@ let charts = {};
 
                                 if (optionFound) {
                                     if (!isCurrentlySelected) {
-                                        // Track map area selection
-                                        if (typeof gtag !== 'undefined') {
-                                            gtag('event', 'map_area_selected', {
-                                                'area': areaName,
-                                                'action': 'select'
-                                            });
-                                        }
                                         selectedAreaLayers.add(layer);
                                         layer.setStyle({
                                             color: '#f59e0b',
@@ -879,13 +830,6 @@ let charts = {};
                                             fillOpacity: 0.7
                                         });
                                     } else {
-                                        // Track map area deselection
-                                        if (typeof gtag !== 'undefined') {
-                                            gtag('event', 'map_area_selected', {
-                                                'area': areaName,
-                                                'action': 'deselect'
-                                            });
-                                        }
                                         selectedAreaLayers.delete(layer);
                                         layer.setStyle({
                                             color: '#3182ce',
@@ -936,6 +880,75 @@ let charts = {};
             }
         }
 
+        function formatPeriodLabel(period) {
+            const timeUnit = document.getElementById('timeUnit').value;
+
+            // Only format if it's weekly time unit
+            if (timeUnit !== 'weekly') {
+                return period;
+            }
+
+            // DEBUG: Log first period to see actual format
+            if (!window.debuggedPeriod) {
+                console.log('🔍 Weekly period format:', period, 'Type:', typeof period);
+                window.debuggedPeriod = true;
+            }
+
+            // Handle different period formats
+            try {
+                // Format 1: ISO week format "2023-W18" or "2023-18"
+                if (typeof period === 'string' && /^\d{4}-?W?\d{1,2}$/.test(period)) {
+                    // Extract year and week number
+                    const match = period.match(/^(\d{4})-?W?(\d{1,2})$/);
+                    if (match) {
+                        const year = match[1];
+                        const weekNum = match[2];
+
+                        // Convert ISO week to actual calendar date
+                        const yearInt = parseInt(year);
+                        const weekInt = parseInt(weekNum);
+
+                        // ISO weeks start on Monday, week 1 contains the first Thursday of the year
+                        const jan4 = new Date(yearInt, 0, 4); // Jan 4 is always in week 1
+                        const jan4Day = jan4.getDay() || 7; // Convert Sunday(0) to 7
+                        const week1Monday = new Date(yearInt, 0, 4 - jan4Day + 1);
+
+                        // Calculate the Monday of the target week
+                        const targetMonday = new Date(week1Monday);
+                        targetMonday.setDate(week1Monday.getDate() + (weekInt - 1) * 7);
+
+                        // Get month and day from that date
+                        const month = targetMonday.getMonth() + 1; // 0-indexed
+                        const day = targetMonday.getDate();
+
+                        // Calculate week of month (1-5)
+                        const weekOfMonth = Math.ceil(day / 7);
+
+                        return `${yearInt}-${month}-w${weekOfMonth}`;
+                    }
+                }
+
+                // Format 2: Date string "2023-05-01"
+                const date = new Date(period);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+
+                    // Calculate week of month (1-5)
+                    const weekOfMonth = Math.ceil(day / 7);
+
+                    return `${year}-${month}-w${weekOfMonth}`;
+                }
+
+                // If all else fails, return original
+                return period;
+            } catch (e) {
+                console.error('Error formatting period:', period, e);
+                return period;
+            }
+        }
+
         function createTrendChart(data) {
             const ctx = document.getElementById('trendChart').getContext('2d');
 
@@ -973,7 +986,7 @@ let charts = {};
             charts.trend = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(d => d.period),
+                    labels: data.map(d => formatPeriodLabel(d.period)),
                     datasets: datasets
                 },
                 options: {
